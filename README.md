@@ -24,7 +24,8 @@ ai-demo-hub/
 │  ├─ prisma/schema.prisma# 英文标识符 + 中文 @map（43 模型 / ~35 枚举）
 │  ├─ prisma/seed.ts      # 幂等种子：租户/角色权限/账号/机器人/知识库/沙箱供应商/演示数据
 │  └─ src/                # iam crm bot telephony outbound qa contract message report integration system + providers
-├─ web/                   # React 前端（18 个页面 + 布局/请求层/实时层）
+├─ web/                   # React 前端（18 个页面 + 布局/请求层/实时层；public/config.js 运行时配后端域名）
+├─ e2e/                   # Playwright 端到端（认证 5 例 + 呼入全链路 1 例）
 ├─ docker-compose.yml     # pg15 + redis7 + api + web
 ├─ .env.example
 └─ .fullstack-flow/       # Fullstack Flow 五阶段过程文档（需求/设计/架构/测试/部署）
@@ -68,6 +69,8 @@ api 容器启动时自动按顺序执行 `prisma migrate deploy`（建中文表�
 健康探针：`GET /api/v1/health/live`（存活）、`GET /api/v1/health/ready`（就绪，探数据库并上报缓存模式）。
 
 > 生产部署：设置 `NODE_ENV=production` 与高强度 `JWT_SECRET/JWT_REFRESH_SECRET/CREDENTIAL_KEY/CTI_WEBHOOK_SECRET`、`ALLOW_DEMO_INBOUND=false`；占位密钥会被启动安全闸门拒绝。详见 `.fullstack-flow/08-deployment.md`。
+>
+> **前端对接真实后端域名（免重新打包）**：静态包 `web/dist` 内的 `config.js` 为运行时配置，同源部署保持默认即可；前后端分离时只改这一个文件 `window.__APP_CONFIG__={apiBase:'https://API域名/api/v1',wsOrigin:'https://API域名'}`，刷新即生效（已禁缓存）。
 
 ## 5. 演示账号（种子，密码统一 Aihub@123456）
 
@@ -94,7 +97,10 @@ api 容器启动时自动按顺序执行 `prisma migrate deploy`（建中文表�
 ```bash
 npm run typecheck     # server + web 全量 TS 类型检查（均 0 错误）
 npm run build         # 后端 tsc 构建 + 前端 vite 构建
-npm test              # Jest 纯函数单测 33 例（NLU / 派单策略 / 质检评分 / 报表比率 / 安全）
+npm test              # Jest：33 单测 + 12 HTTP 接口集成测试，共 45 例（无需 DB）
+npm run e2e:install   # 首次：安装 Playwright Chromium
+# 先 docker compose up -d --build 起全栈，再：
+npm run e2e           # Playwright 端到端 6 例（认证 + 呼入全链路），E2E_BASE_URL 可改目标地址
 ```
 
 ## 9. 安全基线

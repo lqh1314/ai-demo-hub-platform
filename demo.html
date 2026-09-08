@@ -1,0 +1,666 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>企业增长云 · 接线机器人 + 电销作战台 实时演示</title>
+<meta name="description" content="面向 To-B SaaS 获客的全链路平台：智能接线、意向识别、自动派单、坐席实时工作台、AI 小结与经营漏斗，设计支撑 200+ 坐席。" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#080B11; --bg-2:#0C111B; --panel:#10151F; --panel-2:#141B28; --panel-3:#18203040;
+  --line:rgba(148,160,184,.14); --line-2:rgba(148,160,184,.24);
+  --text:#E9EEF7; --muted:#9AA6BD; --faint:#8590A6;
+  --teal:#46E6C8; --sky:#5AB2FF; --amber:#FFC261; --green:#3DDC97; --rose:#FF7A90;
+  --grad:linear-gradient(135deg,#46E6C8,#5AB2FF);
+  --radius:18px; --radius-sm:12px; --radius-lg:26px;
+  --shadow:0 24px 60px -28px rgba(0,0,0,.75);
+  --font-d:'Space Grotesk','Noto Sans SC',system-ui,sans-serif;
+  --font-b:'Inter','Noto Sans SC',system-ui,sans-serif;
+  --font-m:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font-b);color:var(--text);background:var(--bg);
+  line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+::selection{background:rgba(70,230,200,.28)}
+:focus-visible{outline:2px solid var(--teal);outline-offset:3px;border-radius:6px}
+.skip{position:absolute;left:16px;top:-60px;z-index:200;background:var(--teal);color:#04201b;padding:10px 16px;border-radius:10px;font-weight:600;transition:top .2s}
+.skip:focus{top:14px}
+.wrap{width:min(1240px,92vw);margin-inline:auto}
+
+/* ambient background */
+.bg{position:fixed;inset:0;z-index:-2;background:
+  radial-gradient(1100px 700px at 82% -8%,rgba(90,178,255,.12),transparent 60%),
+  radial-gradient(900px 620px at 6% 4%,rgba(70,230,200,.10),transparent 58%),
+  linear-gradient(180deg,var(--bg-2),var(--bg) 40%)}
+.bg-grid{position:fixed;inset:0;z-index:-1;opacity:.5;
+  background-image:linear-gradient(rgba(148,160,184,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(148,160,184,.05) 1px,transparent 1px);
+  background-size:56px 56px;mask-image:radial-gradient(900px 600px at 50% 0%,#000 30%,transparent 78%)}
+.orb{position:fixed;border-radius:50%;filter:blur(90px);z-index:-1;opacity:.5;animation:drift 26s ease-in-out infinite alternate}
+.orb.a{width:420px;height:420px;left:-120px;top:120px;background:rgba(70,230,200,.10)}
+.orb.b{width:480px;height:480px;right:-140px;top:520px;background:rgba(90,178,255,.10);animation-delay:-8s}
+@keyframes drift{from{transform:translate3d(0,0,0)}to{transform:translate3d(40px,30px,0)}}
+
+/* glass */
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:var(--radius);position:relative;
+  box-shadow:var(--shadow);backdrop-filter:blur(14px)}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
+  background:linear-gradient(180deg,rgba(255,255,255,.16),transparent 42%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+
+/* nav */
+header.nav{position:sticky;top:0;z-index:100;transition:background .25s,border-color .25s;border-bottom:1px solid transparent}
+header.nav.stuck{background:rgba(8,11,17,.78);backdrop-filter:blur(16px);border-bottom-color:var(--line)}
+.nav-in{display:flex;align-items:center;gap:22px;height:68px}
+.brand{display:flex;align-items:center;gap:11px;font-family:var(--font-d);font-weight:700;font-size:17px;letter-spacing:.2px}
+.mark{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;box-shadow:0 0 22px rgba(70,230,200,.35)}
+.mark svg{width:19px;height:19px}
+.nav-links{display:flex;gap:4px;margin-left:14px}
+.nav-links a{padding:8px 13px;border-radius:9px;color:var(--muted);font-size:14px;font-weight:500;transition:.18s}
+.nav-links a:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.nav-cta{margin-left:auto;display:flex;gap:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 20px;border-radius:12px;font-weight:600;font-size:14px;transition:transform .18s,box-shadow .18s,border-color .18s,background .18s;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:var(--grad);color:#052020;box-shadow:0 10px 30px -10px rgba(70,230,200,.55)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 16px 38px -10px rgba(70,230,200,.7)}
+.btn-ghost{border:1px solid var(--line-2);color:var(--text);background:rgba(255,255,255,.02)}
+.btn-ghost:hover{border-color:var(--teal);transform:translateY(-2px)}
+.btn-sm{min-height:38px;padding:0 14px;font-size:13px;border-radius:10px}
+
+/* hero */
+.hero{padding:84px 0 56px;display:grid;grid-template-columns:1.05fr .95fr;gap:54px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-m);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);
+  border:1px solid rgba(70,230,200,.28);background:rgba(70,230,200,.07);padding:7px 13px;border-radius:999px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);position:relative}
+.live-dot::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--teal);animation:pulse 2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.5);opacity:1}100%{transform:scale(1.5);opacity:0}}
+h1{font-family:var(--font-d);font-weight:700;font-size:clamp(34px,4.6vw,56px);line-height:1.12;letter-spacing:-.01em;margin:22px 0 18px}
+h1 .grad{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.lead{color:var(--muted);font-size:17px;max-width:560px}
+.hero-actions{display:flex;gap:14px;margin:30px 0 34px;flex-wrap:wrap}
+.hero-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.hstat{border-top:1px solid var(--line);padding-top:14px}
+.hstat b{font-family:var(--font-d);font-size:26px;display:block;letter-spacing:-.01em}
+.hstat b em{font-style:normal;color:var(--teal)}
+.hstat span{font-size:12.5px;color:var(--faint)}
+
+/* live call card */
+.callcard{padding:22px;overflow:hidden}
+.call-top{display:flex;align-items:center;gap:12px}
+.avatar{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(90,178,255,.14);border:1px solid rgba(90,178,255,.3);font-family:var(--font-d);font-weight:700;color:var(--sky)}
+.call-meta{line-height:1.35}
+.call-meta b{font-size:15px}
+.call-meta .num{font-family:var(--font-m);font-size:12.5px;color:var(--muted)}
+.call-state{margin-left:auto;display:flex;align-items:center;gap:7px;font-family:var(--font-m);font-size:11.5px;letter-spacing:.1em;color:var(--amber);border:1px solid rgba(255,194,97,.3);background:rgba(255,194,97,.08);padding:6px 11px;border-radius:999px}
+.wave{display:flex;align-items:center;gap:3px;height:54px;margin:18px 0 6px;padding:0 2px}
+.wave i{flex:1;background:linear-gradient(180deg,var(--teal),var(--sky));border-radius:3px;min-height:6px;height:var(--h,30%);animation:eq 1.1s ease-in-out infinite;animation-delay:var(--d,0s);opacity:.85}
+@keyframes eq{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+.transcript{height:238px;overflow:hidden;display:flex;flex-direction:column;gap:10px;margin-top:14px;mask-image:linear-gradient(#000 86%,transparent)}
+.msg{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;opacity:0;transform:translateY(8px);animation:rise .4s forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.msg .tag{flex:none;font-family:var(--font-m);font-size:10.5px;letter-spacing:.06em;padding:3px 8px;border-radius:7px;margin-top:2px}
+.msg.bot .tag{color:var(--teal);background:rgba(70,230,200,.1);border:1px solid rgba(70,230,200,.22)}
+.msg.cust .tag{color:var(--sky);background:rgba(90,178,255,.1);border:1px solid rgba(90,178,255,.22)}
+.msg.agent .tag{color:var(--amber);background:rgba(255,194,97,.1);border:1px solid rgba(255,194,97,.22)}
+.msg p{color:var(--text);background:rgba(255,255,255,.03);border:1px solid var(--line);padding:8px 11px;border-radius:4px 12px 12px 12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.chip{font-family:var(--font-m);font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid var(--line-2);color:var(--muted)}
+.chip b{color:var(--teal);font-weight:600}
+
+/* section heading */
+section{padding:64px 0}
+.s-head{max-width:720px;margin-bottom:38px}
+.s-head .k{font-family:var(--font-m);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--sky);margin-bottom:12px}
+h2{font-family:var(--font-d);font-size:clamp(26px,3vw,38px);font-weight:700;letter-spacing:-.01em;line-height:1.18}
+.s-head p{color:var(--muted);margin-top:12px;font-size:15.5px}
+
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(188px,auto);gap:16px}
+.cell{padding:24px;display:flex;flex-direction:column;transition:transform .22s,border-color .22s;overflow:hidden}
+.cell:hover{transform:translateY(-3px);border-color:rgba(70,230,200,.34)}
+.cell.wide{grid-column:span 2}.cell.tall{grid-row:span 2}
+.c-ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;border:1px solid var(--line-2);background:rgba(255,255,255,.03)}
+.c-ico svg{width:21px;height:21px;stroke:var(--teal)}
+.cell h3{font-family:var(--font-d);font-size:18px;font-weight:600;margin-bottom:8px}
+.cell p{color:var(--muted);font-size:14px}
+.cell .more{margin-top:auto;padding-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.mini-tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-family:var(--font-m)}
+/* mini visuals */
+.nlu-bars{display:flex;align-items:flex-end;gap:8px;margin-top:16px;height:84px}
+.nlu-bars div{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:6px;height:100%;font-size:11px;color:var(--faint);font-family:var(--font-m)}
+.nlu-bars i{display:block;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--teal),rgba(70,230,200,.25));height:var(--v)}
+.route-flow{display:flex;align-items:center;gap:8px;margin-top:16px;flex-wrap:wrap}
+.route-flow .n{font-family:var(--font-m);font-size:12px;border:1px solid var(--line-2);padding:7px 11px;border-radius:9px;color:var(--muted)}
+.route-flow .n.hot{color:var(--teal);border-color:rgba(70,230,200,.4);background:rgba(70,230,200,.08)}
+.arrow{color:var(--faint)}
+.ring{margin-top:14px;display:flex;align-items:center;gap:18px}
+.ring .lg{font-family:var(--font-d);font-size:30px;color:var(--green)}
+.ring ul{list-style:none;font-size:12.5px;color:var(--muted);display:grid;gap:6px}
+.dotc{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+
+/* flow timeline */
+.flow-wrap{padding:30px}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:0;position:relative;margin-bottom:28px}
+.steps::before{content:"";position:absolute;top:21px;left:6%;right:6%;height:2px;background:var(--line)}
+.step{position:relative;text-align:center;padding:0 8px;cursor:pointer;background:none}
+.step .node{width:42px;height:42px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-family:var(--font-m);font-size:14px;font-weight:600;
+  background:var(--panel);border:1px solid var(--line-2);color:var(--faint);position:relative;z-index:2;transition:.22s}
+.step .lb{font-size:13px;color:var(--muted);font-weight:500}
+.step.active .node{background:var(--grad);color:#052020;border-color:transparent;box-shadow:0 0 24px rgba(70,230,200,.5)}
+.step.done .node{color:var(--teal);border-color:rgba(70,230,200,.45)}
+.step.active .lb{color:var(--text)}
+.flow-panel{display:grid;grid-template-columns:.8fr 1.2fr;gap:24px;align-items:center;border:1px solid var(--line);border-radius:var(--radius-sm);padding:24px;background:rgba(255,255,255,.02)}
+.flow-panel .ftag{font-family:var(--font-m);font-size:12px;color:var(--teal);letter-spacing:.1em}
+.flow-panel h3{font-family:var(--font-d);font-size:22px;margin:10px 0}
+.flow-panel p{color:var(--muted);font-size:14.5px}
+.flow-code{font-family:var(--font-m);font-size:12.5px;line-height:1.9;background:#0a0f18;border:1px solid var(--line);border-radius:12px;padding:18px;color:var(--muted);white-space:pre-wrap}
+.flow-code b{color:var(--teal);font-weight:600}
+.flow-ctrl{display:flex;gap:10px;margin-top:20px;align-items:center}
+
+/* console mock */
+.console{border-radius:var(--radius-lg);overflow:hidden}
+.win-bar{display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.02)}
+.win-bar i{width:11px;height:11px;border-radius:50%;background:#2a3344}
+.win-bar i:nth-child(1){background:var(--rose)}
+.win-bar i:nth-child(2){background:var(--amber)}
+.win-bar i:nth-child(3){background:var(--green)}
+.win-bar .url{margin-left:14px;font-family:var(--font-m);font-size:12px;color:var(--faint);border:1px solid var(--line);padding:4px 12px;border-radius:8px}
+.win-bar .right{margin-left:auto;display:flex;gap:8px}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:10px;overflow:hidden}
+.seg button{padding:11px 14px;font-size:12.5px;color:var(--muted);transition:.18s;min-height:40px}
+.seg button.on{background:rgba(70,230,200,.12);color:var(--teal)}
+.console-grid{display:grid;grid-template-columns:280px 1fr 300px}
+.pane{padding:18px;min-height:460px}
+.pane + .pane{border-left:1px solid var(--line)}
+.pane h4{font-family:var(--font-m);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin-bottom:14px;display:flex;justify-content:space-between}
+.qitem{border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:10px;transition:.18s;text-align:left;width:100%}
+.qitem:hover{border-color:rgba(70,230,200,.35)}
+.qitem.sel{border-color:rgba(70,230,200,.5);background:rgba(70,230,200,.06)}
+.qitem .qn{display:flex;justify-content:space-between;font-size:13.5px;font-weight:600;margin-bottom:6px}
+.qitem .qn .wait{font-family:var(--font-m);color:var(--amber);font-size:12px}
+.qitem .qm{font-size:12px;color:var(--faint);font-family:var(--font-m)}
+.qitem .sk{margin-top:9px;display:flex;gap:6px;flex-wrap:wrap}
+.sk span{font-size:11px;border:1px solid var(--line);border-radius:7px;padding:2px 8px;color:var(--muted)}
+.ct{display:flex;flex-direction:column;gap:11px;max-height:424px;overflow:auto;padding-right:4px}
+.ct .msg{opacity:1;transform:none;animation:none}
+.summary-line{font-size:13px;color:var(--muted);display:flex;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.summary-line b{color:var(--text);min-width:64px;font-weight:600}
+.ai-note{border:1px solid rgba(70,230,200,.28);background:rgba(70,230,200,.06);border-radius:12px;padding:14px;font-size:13px;color:var(--text);line-height:1.7;margin:12px 0}
+.ai-note .h{font-family:var(--font-m);font-size:11px;color:var(--teal);letter-spacing:.1em;margin-bottom:7px;display:flex;align-items:center;gap:7px}
+.mini-bars{display:flex;align-items:flex-end;gap:6px;height:64px;margin-top:10px}
+.mini-bars i{flex:1;background:linear-gradient(180deg,var(--sky),rgba(90,178,255,.2));border-radius:4px;height:var(--v)}
+.donut-row{display:flex;align-items:center;gap:14px;margin-top:6px}
+.legend{list-style:none;font-size:12px;color:var(--muted);display:grid;gap:7px}
+
+/* metrics */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.metric{padding:26px}
+.metric .v{font-family:var(--font-d);font-size:clamp(32px,3.4vw,44px);font-weight:700;letter-spacing:-.02em}
+.metric .v em{font-style:normal;color:var(--teal)}
+.metric .l{color:var(--muted);font-size:14px;margin-top:6px}
+.metric .t{font-family:var(--font-m);font-size:12px;color:var(--green);margin-top:12px}
+
+/* cta */
+.cta-box{padding:54px clamp(24px,5vw,64px);text-align:left;display:grid;grid-template-columns:1.4fr .8fr;gap:30px;align-items:center;
+  background:
+   radial-gradient(600px 240px at 90% 0%,rgba(70,230,200,.12),transparent 60%),
+   linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015))}
+.cta-box h2{margin-bottom:12px}
+.cta-box p{color:var(--muted)}
+.cta-acts{display:flex;flex-direction:column;gap:12px}
+.cta-acts .btn{justify-content:center;width:100%}
+
+footer{border-top:1px solid var(--line);padding:40px 0 54px;color:var(--faint);font-size:13px}
+.foot-in{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.foot-in .fl{display:flex;gap:22px;flex-wrap:wrap}
+.foot-in a:hover{color:var(--text)}
+
+/* reveal */
+.rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+
+/* responsive */
+@media (max-width:1080px){
+  .hero{grid-template-columns:1fr;gap:40px}.bento{grid-template-columns:repeat(2,1fr)}
+  .console-grid{grid-template-columns:240px 1fr}.pane.r{display:none}
+  .metrics{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:repeat(3,1fr);row-gap:22px}
+  .steps::before{display:none}.flow-panel{grid-template-columns:1fr}.cta-box{grid-template-columns:1fr}
+}
+@media (max-width:720px){
+  .nav-links{display:none}.hero{padding-top:54px}.hero-stats{grid-template-columns:repeat(2,1fr)}
+  .bento{grid-template-columns:1fr}.cell.wide{grid-column:span 1}.cell.tall{grid-row:auto}
+  .console-grid{grid-template-columns:1fr}.pane + .pane{border-left:none;border-top:1px solid var(--line)}
+  .pane.l{min-height:auto}.metrics{grid-template-columns:1fr 1fr}
+  section{padding:48px 0}.steps{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}.msg{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到主要内容</a>
+<div class="bg"></div><div class="bg-grid"></div><div class="orb a"></div><div class="orb b"></div>
+
+<header class="nav" id="top">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="企业增长云首页">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#052020" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a8 8 0 0 1 8-8"/><path d="M4 17a4 4 0 0 1 4-4h3v5a4 4 0 0 1-4 4H4z"/><path d="M16 8h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-3z"/></svg></span>
+      企业增长云
+    </a>
+    <nav class="nav-links" aria-label="页面导航">
+      <a href="#cap">能力矩阵</a><a href="#flow">全链路</a><a href="#console">作战台</a><a href="#metrics">规模指标</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost btn-sm" href="#flow">查看链路</a>
+      <a class="btn btn-primary btn-sm" href="#console">进入实时演示</a>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <!-- HERO -->
+  <section class="wrap hero">
+    <div>
+      <span class="eyebrow"><span class="live-dot" aria-hidden="true"></span>AI CONTACT CENTER · LIVE DEMO</span>
+      <h1>让每一通来电，<br/>都被 <span class="grad">AI 接住并转化</span></h1>
+      <p class="lead">接线机器人 7×24 完成应答、答疑、意向识别与自动留资，需要人工时秒级派给最合适的坐席。电销工作台同步弹屏、实时转写、生成 AI 小结并自动建档，一套系统打通从呼入到成交的增长闭环，设计支撑 200+ 坐席。</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#console">进入实时作战台
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a class="btn btn-ghost" href="#cap">了解能力矩阵</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hstat"><b><em>200+</em></b><span>坐席并发规模设计</span></div>
+        <div class="hstat"><b><em>3</em> 套</b><span>智能派单策略</span></div>
+        <div class="hstat"><b><em>7</em> 类</b><span>供应商端口可切换</span></div>
+        <div class="hstat"><b>&lt;<em>1s</em></b><span>呼入到响应</span></div>
+      </div>
+    </div>
+
+    <div class="glass callcard" aria-label="正在进行的通话演示卡片">
+      <div class="call-top">
+        <div class="avatar" aria-hidden="true">王</div>
+        <div class="call-meta"><b>王先生 · 星河制造</b><div class="num">139 0000 1111 · 呼入线路 SIP-03</div></div>
+        <span class="call-state"><span class="live-dot" aria-hidden="true"></span>转人工中</span>
+      </div>
+      <div class="wave" id="wave" role="img" aria-label="实时声纹波形"></div>
+      <div class="transcript" id="heroTranscript" aria-live="polite"></div>
+      <div class="chips">
+        <span class="chip">意向 <b>HIGH</b></span>
+        <span class="chip">槽位 <b>规模 200 人</b></span>
+        <span class="chip">动作 <b>ROUTE_AGENT</b></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAPABILITIES BENTO -->
+  <section class="wrap" id="cap">
+    <div class="s-head rv">
+      <div class="k">Capability Matrix</div>
+      <h2>不是功能堆叠，是一条可观测的增长流水线</h2>
+      <p>从机器人接听到人工跟进、从线索到回款，每个环节都有对应模块与数据回流，管理端实时看见转化。</p>
+    </div>
+    <div class="bento">
+      <article class="glass cell wide rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="6" width="16" height="12" rx="3"/><path d="M12 10v2M9 18v2M15 18v2"/></svg></div>
+        <h3>智能接线机器人</h3>
+        <p>多轮对话、知识库 FAQ、意图分类与槽位抽取，价格、演示、转人工等典型分支全部内置，未配任何外部密钥也能用内置沙箱模型跑通。</p>
+        <div class="nlu-bars" aria-hidden="true">
+          <div><i style="--v:62%"></i>询价</div><div><i style="--v:84%"></i>演示</div>
+          <div><i style="--v:46%"></i>售后</div><div><i style="--v:92%"></i>转人工</div><div><i style="--v:38%"></i>闲聊</div>
+        </div>
+      </article>
+
+      <article class="glass cell rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg></div>
+        <h3>意向识别与留资</h3>
+        <p>抽取手机号、公司规模等槽位，命中意向自动建档线索。</p>
+        <div class="more"><span class="mini-tag">HIGH / MID / LOW</span><span class="mini-tag">自动建档</span></div>
+      </article>
+
+      <article class="glass cell rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h7"/><circle cx="18" cy="15" r="3"/></svg></div>
+        <h3>三套派单策略</h3>
+        <p>轮询、最少负载、技能匹配，按技能组与在线状态选坐席。</p>
+        <div class="more"><span class="mini-tag">队列可观测</span><span class="mini-tag">预测式外呼</span></div>
+      </article>
+
+      <article class="glass cell tall rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 0-9 9v4a2 2 0 0 0 2 2h2v-6H5a7 7 0 0 1 14 0h-2v6h2a2 2 0 0 0 2-2v-4a9 9 0 0 0-9-9z"/><path d="M11 10h2v5h-2z"/></svg></div>
+        <h3>坐席实时作战台</h3>
+        <p>来电弹屏、双向流式转写、话术建议同屏；挂断即生成结构化 AI 小结与跟进待办，坐席不再事后补记录。</p>
+        <div class="route-flow" style="flex-direction:column;align-items:stretch;margin-top:18px">
+          <div class="n hot">实时转写 · ASR</div>
+          <div class="n">AI 小结 · LLM</div>
+          <div class="n">跟进待办 · CRM</div>
+        </div>
+      </article>
+
+      <article class="glass cell rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16M18 4v16M3 9h3M3 15h3M18 9h3M18 15h3M6 12h12"/></svg></div>
+        <h3>外呼任务</h3>
+        <p>名单导入、任务编排、预览与预测式外拨，结果回流线索。</p>
+        <div class="more"><span class="mini-tag">接通率统计</span></div>
+      </article>
+
+      <article class="glass cell rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h3>智能质检</h3>
+        <p>必达项与禁忌项规则评分，机器人与人工话术分开评。</p>
+        <div class="ring">
+          <div class="lg">92</div>
+          <ul>
+            <li><span class="dotc" style="background:var(--green)"></span>优秀 68%</li>
+            <li><span class="dotc" style="background:var(--amber)"></span>待改进 24%</li>
+            <li><span class="dotc" style="background:var(--rose)"></span>不合格 8%</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="glass cell rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg></div>
+        <h3>供应商端口与沙箱</h3>
+        <p>语音、ASR、TTS、大模型、短信统一走端口抽象，内置沙箱离线可跑，配置密钥即切商用。</p>
+        <div class="more"><span class="mini-tag">TELEPHONY</span><span class="mini-tag">ASR / TTS</span><span class="mini-tag">LLM / SMS</span></div>
+      </article>
+
+      <article class="glass cell wide rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg></div>
+        <h3>经营漏斗与管理报表</h3>
+        <p>线索到商机、商机到赢单的转化逐级下钻，通话、接通率、坐席工时、团队排行一屏总览，热点查询走时间桶缓存。</p>
+        <div class="mini-bars" aria-hidden="true" style="margin-top:18px">
+          <i style="--v:100%"></i><i style="--v:78%"></i><i style="--v:58%"></i><i style="--v:42%"></i><i style="--v:30%"></i><i style="--v:21%"></i><i style="--v:14%"></i>
+        </div>
+      </article>
+
+      <article class="glass cell rv">
+        <div class="c-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 6.5a3 3 0 0 1 0 5.4M21 20a5 5 0 0 0-4-4.9"/></svg></div>
+        <h3>多租户与权限</h3>
+        <p>租户数据隔离，管理员、主管、坐席分级授权，关键操作全部写入审计日志。</p>
+        <div class="more"><span class="mini-tag">RBAC</span><span class="mini-tag">审计留痕</span></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- FLOW -->
+  <section class="wrap" id="flow">
+    <div class="s-head rv">
+      <div class="k">End to End Pipeline</div>
+      <h2>一通来电的完整旅程，每一步都留痕</h2>
+      <p>点击任意节点查看该环节的系统动作，也可以让它自动播放一遍。</p>
+    </div>
+    <div class="glass flow-wrap rv">
+      <div class="steps" id="steps" role="tablist" aria-label="全链路步骤"></div>
+      <div class="flow-panel">
+        <div>
+          <div class="ftag" id="fIndex">STEP 01</div>
+          <h3 id="fTitle"></h3>
+          <p id="fDesc"></p>
+          <div class="flow-ctrl">
+            <button class="btn btn-primary btn-sm" id="playBtn" aria-pressed="true">暂停自动播放</button>
+            <button class="btn btn-ghost btn-sm" id="nextBtn">下一步</button>
+          </div>
+        </div>
+        <pre class="flow-code" id="fCode" aria-label="该步骤的数据示例"></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONSOLE -->
+  <section class="wrap" id="console">
+    <div class="s-head rv">
+      <div class="k">Agent Workbench</div>
+      <h2>坐席看到的，是一块会思考的作战台</h2>
+      <p>左侧待接队列，中间实时转写，右侧客户画像与 AI 小结。点击队列中的来电体验切换。</p>
+    </div>
+    <div class="glass console rv">
+      <div class="win-bar">
+        <i aria-hidden="true"></i><i aria-hidden="true"></i><i aria-hidden="true"></i>
+        <span class="url">app.growth-cloud /workbench</span>
+        <div class="right seg" role="group" aria-label="转写筛选">
+          <button data-f="all" class="on">全部</button><button data-f="bot">机器人</button><button data-f="agent">坐席</button><button data-f="cust">客户</button>
+        </div>
+      </div>
+      <div class="console-grid">
+        <aside class="pane l">
+          <h4>待接队列 <span id="qCount"></span></h4>
+          <div id="queue"></div>
+        </aside>
+        <section class="pane" aria-label="实时转写">
+          <h4>实时转写 <span style="color:var(--teal)">ASR STREAM</span></h4>
+          <div class="ct" id="ct"></div>
+        </section>
+        <aside class="pane r">
+          <h4>客户画像</h4>
+          <div class="summary-line"><b>公司</b><span id="cCompany"></span></div>
+          <div class="summary-line"><b>规模</b><span id="cSize"></span></div>
+          <div class="summary-line"><b>来源</b><span id="cSource"></span></div>
+          <div class="summary-line"><b>历史</b><span id="cHistory"></span></div>
+          <div class="ai-note">
+            <div class="h"><span class="live-dot" aria-hidden="true"></span>AI 通话小结</div>
+            <div id="aiNote"></div>
+          </div>
+          <div class="donut-row">
+            <svg width="96" height="96" viewBox="0 0 42 42" aria-label="意向构成环形图">
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#1d2736" stroke-width="5"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#46E6C8" stroke-width="5" stroke-dasharray="62 38" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+              <circle cx="21" cy="21" r="15.9" fill="none" stroke="#5AB2FF" stroke-width="5" stroke-dasharray="24 76" stroke-dashoffset="-37" transform="rotate(-90 21 21)"/>
+              <text x="21" y="23" text-anchor="middle" fill="#E9EEF7" font-size="9" font-family="Space Grotesk">HIGH</text>
+            </svg>
+            <ul class="legend">
+              <li><span class="dotc" style="background:var(--teal)"></span>高意向 62%</li>
+              <li><span class="dotc" style="background:var(--sky)"></span>跟进中 24%</li>
+              <li><span class="dotc" style="background:#2a3344"></span>其余 14%</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- METRICS -->
+  <section class="wrap" id="metrics">
+    <div class="s-head rv"><div class="k">Designed For Scale</div><h2>按 200+ 坐席的真实运营口径设计</h2></div>
+    <div class="metrics">
+      <div class="glass metric rv"><div class="v" data-count="200" data-suffix="+">0</div><div class="l">坐席并发规模</div><div class="t">队列与在线态走 Redis，缺省可单机降级</div></div>
+      <div class="glass metric rv"><div class="v" data-count="43">0</div><div class="l">中文物理名业务表</div><div class="t">租户隔离，字段与枚举全中文</div></div>
+      <div class="glass metric rv"><div class="v" data-count="18">0</div><div class="l">工作台页面</div><div class="t">CRM、外呼、机器人、质检、报表全覆盖</div></div>
+      <div class="glass metric rv"><div class="v" data-count="45" data-suffix=" 例">0</div><div class="l">自动化测试</div><div class="t">单元 + HTTP 集成测试全绿</div></div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="wrap">
+    <div class="glass cta-box rv">
+      <div>
+        <h2>从这一通来电开始，搭建你的增长闭环</h2>
+        <p>内置沙箱可离线演示全流程，配置真实语音、ASR、TTS、大模型与短信密钥后，平滑切换到商用能力，无需改业务代码。</p>
+      </div>
+      <div class="cta-acts">
+        <a class="btn btn-primary" href="#console">再看一遍作战台</a>
+        <a class="btn btn-ghost" href="#top">回到顶部</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>企业增长云 · 接线机器人 + 电销工作台 全链路平台（产品演示）</span>
+    <div class="fl">
+      <a href="#cap">能力矩阵</a><a href="#flow">全链路</a><a href="#console">作战台</a>
+      <span id="year"></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  /* nav stuck */
+  var nav = document.querySelector('header.nav');
+  var onScroll = function(){ nav.classList.toggle('stuck', window.scrollY > 8); };
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+  /* waveform */
+  var wave = document.getElementById('wave');
+  for(var i=0;i<34;i++){
+    var bar=document.createElement('i');
+    bar.style.setProperty('--h', (18+Math.round(Math.random()*78))+'%');
+    bar.style.setProperty('--d', (-Math.random()*1.2).toFixed(2)+'s');
+    if(reduce) bar.style.animation='none';
+    wave.appendChild(bar);
+  }
+
+  /* hero streaming transcript */
+  var script = [
+    ['cust','你们这套系统，大概支持多少坐席？'],
+    ['bot','我们按联络中心规模设计，单套可支撑 200 名以上坐席同时在线。'],
+    ['cust','我们公司两百人左右，想约个产品演示。'],
+    ['bot','已识别为高意向，正在为您匹配「制造行业组」空闲坐席，请稍候。'],
+    ['agent','您好王先生，我是顾问小李，看到您想约演示，现在方便聊两分钟吗？']
+  ];
+  var ht = document.getElementById('heroTranscript');
+  var label={bot:'机器人',cust:'客户',agent:'坐席'};
+  function renderHero(idx){
+    ht.innerHTML='';
+    for(var k=0;k<=idx;k++){
+      var d=script[k], m=document.createElement('div');
+      m.className='msg '+d[0];
+      m.innerHTML='<span class="tag">'+label[d[0]]+'</span><p>'+d[1]+'</p>';
+      ht.appendChild(m);
+    }
+  }
+  var hi=0; renderHero(0);
+  if(!reduce){
+    setInterval(function(){ hi=(hi+1)%script.length; renderHero(hi); }, 2600);
+  }else{ renderHero(script.length-1); }
+
+  /* reveal */
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.14});
+  document.querySelectorAll('.rv').forEach(function(el){io.observe(el);});
+
+  /* count up */
+  var cio = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting) return; cio.unobserve(e.target);
+      var el=e.target, target=+el.dataset.count, suffix=el.dataset.suffix||'';
+      if(reduce){el.textContent=target+suffix;return;}
+      var t0=null;
+      function step(t){ if(!t0)t0=t; var p=Math.min((t-t0)/1100,1), val=Math.round(target*(1-Math.pow(1-p,3)));
+        el.textContent=val+suffix; if(p<1)requestAnimationFrame(step);}
+      requestAnimationFrame(step);
+    });
+  },{threshold:.5});
+  document.querySelectorAll('[data-count]').forEach(function(el){cio.observe(el);});
+
+  /* pipeline */
+  var steps=[
+    {t:'呼入接入',d:'运营商线路或沙箱触发来电，系统按主叫号码弹屏并建立通话会话。',c:'事件 CALL_INBOUND\n主叫 <b>13900001111</b>\n技能组 <b>制造行业组</b>\n通道 <b>SIP-03 · Sandbox</b>'},
+    {t:'机器人接听',d:'接线机器人播报欢迎语，调用 NLU 做意图分类与槽位抽取，检索知识库作答。',c:'NLU.intent = <b>PRODUCT_DEMO</b>\n槽位 公司规模 = <b>200 人</b>\n置信度 <b>0.92</b> · 命中知识库 3 条'},
+    {t:'意向识别',d:'识别为高意向并自动留资，创建线索与客户，写入跟进动态，全程无需人工。',c:'leadLevel = <b>HIGH</b>\n动作 <b>UPSERT_LEAD</b>\n线索来源 = 呼入机器人 · 自动建档'},
+    {t:'智能派单',d:'命中转人工意图后，按技能匹配、最少负载、轮询策略选出最优坐席并入待接队列。',c:'策略 <b>SKILL_MATCH</b>\n候选 [agent02, agent01]\n选中 <b>agent02 · 当前负载最低</b>'},
+    {t:'人工接听',d:'坐席在作战台一键接听，实时转写双向上屏，右侧同步客户画像与话术建议。',c:'状态 QUEUE → <b>ACTIVE</b>\nASR 流式转写开启\n弹屏客户：星河制造 · 王先生'},
+    {t:'小结与闭环',d:'挂断即生成 AI 小结、待办与质检记录，商机阶段推进，数据回流经营漏斗。',c:'AI 小结：预算明确，约周四演示\n待办 <b>24h 内回传报价单</b>\n商机阶段 线索 → <b>商机</b>'}
+  ];
+  var sw=document.getElementById('steps'), cur=0, timer=null;
+  steps.forEach(function(s,idx){
+    var b=document.createElement('button');
+    b.className='step';b.setAttribute('role','tab');b.setAttribute('aria-selected','false');
+    b.innerHTML='<div class="node">'+String(idx+1).padStart(2,'0')+'</div><div class="lb">'+s.t+'</div>';
+    b.addEventListener('click',function(){setStep(idx);});
+    sw.appendChild(b);
+  });
+  function setStep(idx){
+    cur=idx;var s=steps[idx];
+    document.getElementById('fIndex').textContent='STEP '+String(idx+1).padStart(2,'0');
+    document.getElementById('fTitle').textContent=s.t;
+    document.getElementById('fDesc').textContent=s.d;
+    document.getElementById('fCode').innerHTML=s.c;
+    Array.prototype.forEach.call(sw.children,function(c,i){
+      c.classList.toggle('active',i===idx);c.classList.toggle('done',i<idx);
+      c.setAttribute('aria-selected',i===idx?'true':'false');
+    });
+  }
+  function play(){ if(reduce)return; timer=setInterval(function(){setStep((cur+1)%steps.length);},3000); }
+  function pause(){ if(timer){clearInterval(timer);timer=null;} }
+  var pb=document.getElementById('playBtn');
+  pb.addEventListener('click',function(){
+    if(timer){pause();pb.textContent='播放全链路';pb.setAttribute('aria-pressed','false');}
+    else{play();pb.textContent='暂停自动播放';pb.setAttribute('aria-pressed','true');}
+  });
+  document.getElementById('nextBtn').addEventListener('click',function(){setStep((cur+1)%steps.length);});
+  setStep(0); play();
+
+  /* workbench */
+  var calls=[
+    {id:'C-2041',name:'王先生 · 星河制造',num:'139 0000 1111',wait:'00:12',skill:['制造组','高意向'],
+     company:'星河制造有限公司',size:'约 200 人',source:'呼入机器人自动建档',history:'第 2 次来电，上次咨询报价',
+     note:'预算区间明确，关注 200 坐席并发与质检能力，已约定周四上午产品演示，需在 24 小时内回传分档报价单。',
+     lines:[['bot','您好，这里是企业增长云，请问有什么可以帮您？'],['cust','想了解你们电销系统怎么收费'],['bot','已为您匹配制造行业顾问，请稍候'],['agent','王先生您好，我是顾问小李'],['cust','我们大概两百人，需要质检和报表'],['agent','没问题，200 坐席规模正是我们的标准场景']]},
+    {id:'C-2040',name:'李女士 · 远航贸易',num:'138 1188 2233',wait:'00:31',skill:['贸易组','演示'],
+     company:'远航贸易有限公司',size:'约 60 人',source:'官网留资回呼',history:'首次深度沟通',
+     note:'关注外呼名单导入与接通率统计，希望先跑两周试点，建议安排外呼任务模块演示。',
+     lines:[['bot','感谢回呼，正在为您接通顾问'],['agent','李女士您好，看到您留了体验申请'],['cust','我们主要想提升外呼效率'],['agent','可以先用名单导入做一轮预测式外呼试点']]},
+    {id:'C-2039',name:'赵总 · 恒立服务',num:'137 6677 8899',wait:'00:48',skill:['服务组','售后'],
+     company:'恒立客户服务有限公司',size:'约 120 人',source:'400 呼入',history:'老客户，已购基础版',
+     note:'老客户咨询升级方案，关注机器人夜间值守与转人工衔接，可推荐增购智能接线包。',
+     lines:[['cust','晚上没人值班，漏接很多电话'],['agent','机器人可以 7 乘 24 小时先接听，白天再转人工跟进']]}
+  ];
+  var q=document.getElementById('queue'),ct=document.getElementById('ct'),filter='all',sel=0;
+  var cm={bot:['机器人','var(--teal)'],agent:['坐席','var(--amber)'],cust:['客户','var(--sky)']};
+  function renderQueue(){
+    q.innerHTML='';document.getElementById('qCount').textContent=calls.length+' 通';
+    calls.forEach(function(c,i){
+      var b=document.createElement('button');
+      b.className='qitem'+(i===sel?' sel':'');
+      b.innerHTML='<div class="qn"><span>'+c.name+'</span><span class="wait">等待 '+c.wait+'</span></div>'+
+        '<div class="qm">'+c.num+' · '+c.id+'</div><div class="sk">'+c.skill.map(function(s){return '<span>'+s+'</span>';}).join('')+'</div>';
+      b.addEventListener('click',function(){sel=i;renderQueue();renderTranscript();renderProfile();});
+      q.appendChild(b);
+    });
+  }
+  function renderTranscript(){
+    ct.innerHTML='';
+    calls[sel].lines.forEach(function(l){
+      if(filter!=='all'&&l[0]!==filter) return;
+      var m=document.createElement('div');m.className='msg '+l[0];
+      m.innerHTML='<span class="tag" style="color:'+cm[l[0]][1]+'">'+cm[l[0]][0]+'</span><p>'+l[1]+'</p>';
+      ct.appendChild(m);
+    });
+  }
+  function renderProfile(){
+    var c=calls[sel];
+    document.getElementById('cCompany').textContent=c.company;
+    document.getElementById('cSize').textContent=c.size;
+    document.getElementById('cSource').textContent=c.source;
+    document.getElementById('cHistory').textContent=c.history;
+    document.getElementById('aiNote').textContent=c.note;
+  }
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.seg button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');filter=b.dataset.f;renderTranscript();
+    });
+  });
+  renderQueue();renderTranscript();renderProfile();
+})();
+</script>
+</body>
+</html>

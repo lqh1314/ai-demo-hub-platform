@@ -55,8 +55,8 @@
 - system：GET/POST dicts、POST dicts/:id/items；GET notifications、GET notifications/unread-count、POST notifications/:id/read；GET system/audit。
 
 ### 1.13 统一约定
-- 列表响应 `{list,total,page,pageSize}`；错误响应 `{code,message}`，HTTP 状态：400 参数、401 未认证、403 越权、404 不存在、409 冲突、423 锁定、500 服务异常。
-- WebSocket：namespace `/realtime`，默认 path `/socket.io`；事件 queue.updated / call.status / call.transcript.segment / call.ai_summary / call.bot_started。
+- 列表响应 `{list,total,page,pageSize}`；错误响应统一 `{code,message,details,traceId}`，HTTP 状态：400 参数（BAD_REQUEST）、401 未认证（UNAUTHORIZED）、403 越权（FORBIDDEN）、404 不存在（NOT_FOUND）、409 冲突（CONFLICT）、422 校验失败（VALIDATION_FAILED）、423 锁定（LOCKED）、429 限流、500 服务异常；readiness 依赖不通返回 503 + code `NOT_READY`，details 标明 database 状态。全局异常过滤器内置 HTTP 状态码到稳定 code 的映射，Nest 内置校验/HTTP 异常不再回退 INTERNAL_ERROR。
+- WebSocket：namespace `/realtime`，默认 path `/socket.io`；事件 queue.updated / call.status / call.transcript.segment / call.ai_summary / call.bot_started。WS 地址支持运行时配置（见 ADR-5）。
 
 ## 二、数据库变更说明
 - 本次为**初始建库**：迁移 `00000000000000_init`，43 张中文物理表 + 中文枚举类型，无存量数据影响。
@@ -86,6 +86,12 @@
 - 决定：AntD 响应式 Web（H5），实时能力用 Socket.IO。
 - 后果：一套代码多端可用、交付快；复杂原生通话能力仍依赖运营商软电话 SDK（后续按需接入）。
 
+### ADR-5：前端后端域名走运行时 config.js，而非构建期写死
+- 背景：同一份前端构建产物要部署到测试、预发、生产多个环境，后端域名各不相同；若写死在 Vite 环境变量里，每换一个环境就要重新打包。
+- 候选：①构建期 VITE_API_BASE 写死（换环境必重打）；②运行时 `/config.js` 挂 `window.__APP_CONFIG__`（部署后只改静态文件）。
+- 决定：选②并保留①作为兜底。`web/public/config.js` 在 `<head>` 最先加载，`runtime-config.ts` 优先级为 `window.__APP_CONFIG__` > 构建期 `VITE_API_BASE/VITE_WS_ORIGIN` > 同源 `/api/v1`；WS origin 由 apiBase 推导，namespace 固定 `/realtime`、path 固定 `/socket.io`；nginx 对 config.js 与 index.html 禁缓存。
+- 后果：一次构建到处部署，切后端只改 config.js；代价是多一个需要随部署分发的静态文件（已写入 Dockerfile/nginx 与部署文档 7.4）。
+
 ## 四、用户手册（演示动线）
 1. 登录（种子账号，密码均 `Aihub@123456`）：admin 管理员 / manager 主管 / agent01、agent02 坐席。
 2. 用「线路模拟器」发起一通呼入 → 机器人多轮应答/FAQ → 命中意向转人工。
@@ -98,13 +104,18 @@
 ### 做了什么
 - DB：43 张中文物理表 + 初始迁移 + 幂等种子。
 - 后端：13 个业务模块 + common + providers，约 60 个 REST 端点 + WS 实时通道，Provider 沙箱全链路可离线跑。
-- 前端：18 个页面 + 统一布局/请求/枚举/实时封装，响应式 H5。
-- 工程：根 workspaces、Docker Compose 四服务、两 Dockerfile、nginx 反代、CI 工作流、健康探针、.env.example、README。
+- 前端：18 个页面 + 统一布局/请求/枚举/实时封装，响应式 H5；后端域名走运行时 config.js（ADR-5），同一份 dist 部署后只改 config.js 即可切环境。
+- 测试：Jest 6 套件 45 例（5 个纯函数/业务单测套件 33 例 + HTTP 集成测试 12 例，集成套件用 @nestjs/testing 装配真实 Guard/Pipe/Filter/Controller，仅 mock Prisma/Redis，无需数据库即可跑）；Playwright E2E 6 例落盘 `e2e/`（登录鉴权 5 例 + 呼入到建档全链路 1 例），由 CI 在 PG+Redis 服务容器中执行。
+- 工程：根 workspaces、Docker Compose 四服务、两 Dockerfile、nginx 反代、GitHub Actions 三 Job（类型检查+单测/集成+构建 / 镜像构建 / E2E）、健康探针、.env.example、README。
+- 演示物料：`landing.html` 产品入口页与 `demo.html` 高级实时演示单页（暗色作战室风格、自包含无外部 JS 依赖），均已发布 EdgeOne Pages。
 ### 如何验证
-- `npm install`（本沙箱需 `--ignore-scripts`，常规环境直接装）→ `npm run typecheck` → `npm test`（33 绿）→ `npm run build`；或 `docker compose up -d --build` 起全栈按第四节走动线。
+- `npm install`（本沙箱需 `--ignore-scripts`，常规环境直接装）→ `npm run typecheck` → `npm test`（6 套件 45 例全绿，2026-09-08 实跑 113.9s）→ `npm run build`。
+- E2E（需 Node18+ 与可起的后端/前端，或直接走 CI）：`npm run e2e:install` 装 Chromium，`E2E_BASE_URL=http://localhost:4173 npm run e2e`；本沙箱无浏览器，E2E 未本机实跑，仅在 CI 与 `e2e/README.md` 中固化。
+- 或 `docker compose up -d --build` 起全栈按第四节走动线。
 ### 已知限制
-1. 沙箱无 Docker/PG/Redis，**集成测试、E2E、镜像实跑、迁移对真实库执行**未在本机完成，已给容器环境与补测清单（07 第 1.3）。
+1. 沙箱无 Docker/PG/Redis/浏览器：**镜像实跑、迁移对真实库执行、Playwright E2E 实跑**未在本机完成，已由 CI 三 Job 与 `e2e/README.md`、08 第 7.1 节固化；HTTP 集成测试已在本机无库实跑通过（12 例）。
 2. 真实运营商/ASR/TTS/LLM/短信账号与线路资质需用户提供，当前为 Sandbox。
-3. 剩余 backlog：超大组织下拉远程搜索、首登强制改密、httpOnly Cookie、覆盖率/CVE 门禁、关联名 include、游标分页（均为 Low/不阻断）。
+3. 保存的 PAT 仅 public_repo scope，无 workflow 权限：`.github/workflows/ci.yml` 只存在本地与工程包，需带 workflow scope 的令牌补推或网页上传。
+4. 剩余 backlog：超大组织下拉远程搜索、首登强制改密、httpOnly Cookie、覆盖率/CVE 门禁、关联名 include、游标分页（均为 Low/不阻断）。
 ### 下一步建议
-- 在有 Docker 的环境执行 08 的 7.1 实跑全栈并补集成/E2E；推 GitHub 后由 CI 守门；准备真实供应商凭证时按 ADR-1 切换并配置 CTI 密钥；正式上线按 7.2 设强密钥与生产变量、按 7.3 演练回滚。
+- 在有 Docker 的环境执行 08 的 7.1 实跑全栈并跑 E2E；用带 workflow scope 的令牌补推 ci.yml 让 CI 守门；准备真实供应商凭证时按 ADR-1 切换并配置 CTI 密钥；前端部署后按 ADR-5/08 第 7.4 改 config.js 指向真实后端域名；正式上线按 7.2 设强密钥与生产变量、按 7.3 演练回滚。

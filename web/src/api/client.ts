@@ -1,7 +1,8 @@
 import axios, { AxiosError } from 'axios';
 import { message } from 'antd';
+import { RUNTIME } from '../lib/runtime-config';
 
-const BASE = import.meta.env.VITE_API_BASE || '/api/v1';
+const BASE = RUNTIME.apiBase;
 
 export const http = axios.create({ baseURL: BASE, timeout: 20000 });
 

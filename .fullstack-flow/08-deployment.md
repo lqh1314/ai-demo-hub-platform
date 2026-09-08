@@ -15,10 +15,12 @@
 1. `actions/setup-node@v4` + `npm ci`（根 workspaces 一次装 server+web）；
 2. `prisma generate`；
 3. `npm run typecheck`（server + web 双 tsc）；
-4. `npm test`（后端 33 单测）；
+4. `npm test`（后端 Jest：33 单测 + 12 HTTP 接口集成测试，共 45 例，无需 DB）；
 5. `npm run build`（server + web 生产构建）；
-6. 第二 job `docker compose config` 校验编排合法性。
+6. 第二 job `docker compose config` 校验编排合法性；
+7. 第三 job `e2e`：起 postgres15/redis7 service → `migrate deploy`+`db seed` → 起 api 与 web preview → `playwright install chromium` → 跑 `e2e/` 6 例端到端，失败上传 trace/截图/录像。
 > 发布门禁：测试不过禁止部署。CD（构建镜像并推镜像仓库/上服务器 `compose pull && up -d`）在目标环境凭据就绪后接入同一 workflow，本仓库先交付 CI 与容器化文件。
+> 注：当前 GitHub PAT 仅 `public_repo` scope，`.github/workflows/ci.yml` 无法随 git push 上远端（GitHub 拒绝无 workflow 权限的令牌推送工作流目录），该文件已随工程包交付；在具备 `workflow` scope 的令牌/网页上传后即生效。
 
 ## 3. 迁移上流水线（先迁移后发布）
 - 迁移是**独立且先于应用启动**的阶段：api 容器启动命令固定 `npx prisma migrate deploy` 在前，迁移失败则容器退出、不启动新版本应用。
@@ -62,7 +64,17 @@ docker compose up -d --build  # 自动建库(中文表)+种子+起服务
 2. **数据回滚（仅当迁移有破坏性变更才需要）**：确认旧版应用稳定后，再按该迁移的收缩逆序回滚数据库（Prisma 不自动 down，破坏性迁移需在迁移 PR 中附手写 down SQL 并先在演练库验证）。
 3. 配置/开关回滚：优先用特性开关把问题链路切回沙箱/关闭，做到秒级止损再回滚版本。
 4. 每次回滚后重跑 `/health/ready` 与主流程冒烟，记录时间线。
+### 7.4 前端对接「真实后端域名」（运行时可配，免重新打包）
+前端已支持**同一构建产物**在部署期切换后端，优先级：`/config.js`（运行时）> 构建期 `VITE_*` > 同源默认 `/api/v1`。
+- **同源 compose / nginx 反代**：无需改动，`config.js` 保持 `apiBase:'/api/v1'`、`wsOrigin:''`。
+- **前后端分离 / EdgeOne 等纯静态托管**：把静态包 `web/dist` 上传后，只改包内 **`config.js`** 一个文件：
+  ```js
+  window.__APP_CONFIG__ = { apiBase: 'https://api.your-domain.com/api/v1', wsOrigin: 'https://api.your-domain.com' };
+  ```
+  其中 `wsOrigin` 用于坐席实时通道（Socket.IO `/realtime`），其域名必须加入后端 CORS 白名单；`config.js` 与 `index.html` 已在 nginx 配置为**禁缓存**，改完刷新即生效。
+- 若要在**打包时**写死域名，改用 `web/.env.production` 的 `VITE_API_BASE/VITE_WS_ORIGIN` 后重新 `vite build`（一般不需要，运行时 config.js 更灵活）。
+- 本次已按生产配置完成 `vite build`，待部署静态包为 `web/dist`（含 config.js、hash 化 assets，约 2.5MB，gzip 后主业务包约 41KB）。
 
 ## 8. 已知部署边界（如实声明）
-- 本沙箱**无 Docker / PostgreSQL / Redis**，`docker-compose.yml`、两个 Dockerfile、nginx.conf **未经本机构建/运行验证**；已通过 YAML 合法性校验、`tsc/build/jest` 保证产物可编译，镜像实跑需在有 Docker 的环境按 7.1 验证。
-- 前端若走 EdgeOne Pages 纯静态托管，需将 `/api`、`/socket.io` 指向独立部署的 API 域名（构建期设 `VITE_API_BASE`），同源 compose 部署则无需设置。
+- 本沙箱**无 Docker / PostgreSQL / Redis / 浏览器**，`docker-compose.yml`、两个 Dockerfile、nginx.conf **未经本机构建/运行验证**；已通过 YAML 合法性校验、`tsc/build/jest`（45 例）保证产物可编译，镜像实跑与 Playwright E2E 需在有 Docker/浏览器的环境按 7.1 与 `e2e/README.md` 验证（CI 已配 `e2e` job 自动起 pg+redis 全栈执行）。
+- 前端若走 EdgeOne Pages 等纯静态托管，按 7.4 修改包内 `config.js` 指向独立部署的 API 域名即可（REST `/api/v1` 与实时 `/socket.io` 同源于该 API 域名），无需重新构建；同源 compose 部署则无需设置。

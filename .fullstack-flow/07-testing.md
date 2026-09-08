@@ -8,12 +8,15 @@
 
 | 验证项 | 命令 | 结果 |
 |---|---|---|
-| 后端单元测试 | `npx jest --runInBand`（server） | **5 套件 / 33 用例全部通过**（含闸门 C 新增安全回归 10 例，约 40s） |
+| 后端单元测试 | `npx jest --runInBand`（server，src 下 5 套件） | **5 套件 / 33 用例全部通过**（含闸门 C 新增安全回归 10 例） |
+| 后端 HTTP 接口集成测试 | `npx jest test/http.integration.spec.ts`（supertest，真实 Guard/Pipe/Filter/Controller/Service + mock Prisma/Redis，**无需 DB**） | **1 套件 / 12 用例全部通过**（约 120s） |
+| 后端测试合计 | `npx jest --runInBand` | **6 套件 / 45 用例全部通过** |
 | 后端类型检查 | `npx tsc --noEmit -p tsconfig.json` | **0 错误** |
 | 后端生产构建 | `tsc -p tsconfig.build.json` | **exit 0，dist 已产出** |
 | Prisma Schema | `prisma validate` / `prisma generate` | **schema valid，Client 5.22 生成成功** |
 | 前端类型检查 | `npx tsc --noEmit`（web） | **0 错误** |
-| 前端生产构建 | `npx vite build`（web） | **exit 0，3782 模块，分包后最大 chunk 1.26MB < 1.6MB 阈值** |
+| 前端生产构建 | `npx vite build`（web） | **exit 0，3783 模块，分包后最大 chunk 1.26MB < 1.6MB 阈值，dist 含运行时 config.js** |
+| E2E 用例落盘 | Playwright（`e2e/`，6 用例） | 已编写并配 CI e2e job；**本沙箱无浏览器/DB 未实跑**，CI 起 pg+redis 全栈后执行 |
 | seed 脚本类型 | `tsc` 单独检查 prisma/seed.ts | 通过（幂等 upsert） |
 
 ### 1.2 单元测试清单（纯函数，隔离外部依赖）
@@ -28,18 +31,36 @@
 
 每个被测纯函数均覆盖**正常路径 / 边界条件 / 错误或空输入**三类。核心业务决策（NLU、派单、质检评分、报表比率）分支已覆盖；这些函数被上层 service 复用，等于给主链路的关键判断上了回归锁。
 
-### 1.3 本沙箱无法运行的测试层（如实标注 + 补测方案）
+### 1.2.1 HTTP 接口集成测试（`server/test/http.integration.spec.ts`，12 例，已实跑全绿）
 
-当前沙箱**无 PostgreSQL / Redis / Docker / sudo**，下列需要真实运行时的测试层未在本机执行，不属于"已验证"：
+用 `@nestjs/testing` 装配**真实**的全局 JwtAuthGuard、ValidationPipe、AllExceptionsFilter、AuthController/HealthController 与 AuthService/RbacService，仅把 Prisma/Redis 两个外部依赖替换为内存 mock，因此**无需 PostgreSQL/Redis 即可在任意环境实跑**，完整走通 HTTP→守卫→校验→控制器→服务→异常过滤器链路：
 
-| 测试层 | 现状 | 补测方案（具备 DB 的环境，已在 docker-compose 备好） |
+- 健康探针（3）：live 恒 200；ready 探库成功 200 并上报缓存模式；探库异常 503 `NOT_READY`（依赖异常路径）。
+- 鉴权守卫（3）：无 token→401 `UNAUTHORIZED`；非法 token→401 `TOKEN_INVALID`；合法 token→200 返回当前用户与权限。
+- 登录（6）：参数非法→400 `BAD_REQUEST` 且**不触库**；用户不存在→401；账号停用→403 `FORBIDDEN`；密码错→401 且失败计数 +1 落库；正常登录→201 双 token/权限并清零失败计数；DB 抛错→500 `INTERNAL_ERROR` 且**不泄漏内部错误文本**。
+
+> 编写中发现并修复 2 处真实问题（回归闭环）：① 统一异常过滤器对 Nest 内置校验/HTTP 异常未派生稳定 code（会错误回退 `INTERNAL_ERROR`），已在 `all-exceptions.filter.ts` 增加状态码→code 映射（400 BAD_REQUEST 等）；② readiness 失败体不符合统一错误契约，已改为 `{code:'NOT_READY',message,details:{database:'down'}}`。
+
+### 1.2.2 E2E 端到端（Playwright，`e2e/`，6 用例，已落盘 + 配 CI，本沙箱未实跑）
+
+| 文件 | 用例数 | 覆盖主流程 |
 |---|---|---|
-| 接口集成测试（成功/鉴权失败/参数非法/依赖异常） | 未运行 | 起 pg+redis 后用 Jest + supertest 对每个 Controller 跑 4 路径；JwtAuthGuard 未带 token→401、低权限→403 为重点断言 |
-| 数据层测试（迁移正向/回滚、关键查询） | 未运行 | `prisma migrate deploy` 正向 + `migrate diff` 校验；对来电弹屏号码反查、漏斗 groupBy、外呼待拨部分索引补断言 |
-| 前端组件 / E2E | 未运行（以 tsc + vite build 保证可编译可打包） | Vitest + Testing Library 覆盖表单/列表交互；Playwright 跑「呼入→机器人→转人工→接听→AI小结→建档」主流程 |
-| 覆盖率统计 | 未产出（无 DB，未开 --coverage 全量） | CI 中 `jest --coverage`，目标新代码行/分支 80%+ |
+| `e2e/auth.spec.ts` | 5 | 登录页渲染、错误密码提示且不跳转、未登录受保护页重定向登录、admin 登录落 access_token、报表页 ECharts 渲染 |
+| `e2e/call-flow.spec.ts` | 1 | 坐席登录→CTI 演示接口制造呼入→机器人多轮/转人工→待接队列接听→实时通话转写→挂断→CRM 自动建档（号码可查） |
 
-> 结论：**纯业务逻辑层已实测全绿且可重复；依赖外部运行时的集成/E2E 层为已知缺口**，已提供一键容器环境与明确补测路径，需在有 PostgreSQL 的环境补齐后方可宣称端到端验证完成。
+配套：根 `npm run e2e:install`（装 chromium）/`npm run e2e`；`e2e/playwright.config.ts` 用 `E2E_BASE_URL` 指向已起好的全栈；CI 新增 `e2e` job（postgres+redis service→迁移种子→起 api/web→playwright，失败上传报告/trace/录像）。
+
+### 1.3 仍需真实运行时的测试层（如实标注 + 补测方案）
+
+当前沙箱**无 PostgreSQL / Redis / Docker / sudo / 浏览器**，下列层未在本机执行，不属于"本机已验证"：
+
+| 测试层 | 现状 | 补测方案（已在 CI/compose 备好） |
+|---|---|---|
+| 数据层测试（迁移正向/回滚、关键查询） | 未运行（迁移 SQL 已由 `migrate diff` 生成并经 validate） | CI e2e job 已对真实 pg 跑 `migrate deploy`+`db seed`；回滚演练与号码反查/漏斗 groupBy 断言列入 backlog |
+| Playwright E2E | **用例与 CI 已就绪，未在本机跑**（无浏览器/DB） | `docker compose up -d --build` 后 `npm run e2e:install && npm run e2e`；或直接由 CI e2e job 执行 |
+| 覆盖率统计 | 未产出（未开 --coverage 全量） | CI 中 `jest --coverage`，目标新代码行/分支 80%+ |
+
+> 结论：**纯逻辑（33 单测）与 HTTP 接口层（12 集成测试，共 45 例）已在本沙箱实测全绿且可重复；E2E 用例与 CI 已齐备，需在带浏览器+PostgreSQL 的环境（CI 或 compose）执行**；迁移对真库的正向/回滚演练同属该环境补测项。
 
 ## 二、安全发现（静态审计，位置 + 级别 + 处置）
 
@@ -90,19 +111,27 @@
 7. **回归测试**：新增 `common/security.spec.ts` 10 例覆盖上述安全逻辑。
 8. **复验结果**：修复后 `tsc --noEmit` **0 错误**、`npm run build` **exit 0**、`jest` **5 套件 33 例全绿**（由 23 增至 33），确认修复未引入回退。
 
+### 4.3 追加：集成测试 / E2E / 前端运行时域名（本轮）
+9. **新增 HTTP 接口集成测试**：`server/test/http.integration.spec.ts`（12 例，supertest + 真实 Nest 装配，mock 掉 Prisma/Redis），无需 DB 即可回归鉴权/校验/异常链路；新增 dev 依赖 `supertest/@types/supertest/@nestjs/testing`。
+10. **过滤器错误码派生修复**：`all-exceptions.filter.ts` 增加 HTTP 状态码→稳定 code 映射，修正 Nest 内置校验异常被错误标成 `INTERNAL_ERROR` 的问题；`health.controller.ts` readiness 失败体改为统一契约 `NOT_READY`。
+11. **E2E 落盘**：新增 `e2e/`（playwright.config + auth 5 例 + 全链路 1 例 + README），根 package.json 加 `e2e/e2e:install` 脚本与 `@playwright/test`，CI 新增带 pg/redis service 的 `e2e` job。
+12. **前端运行时后端域名**：新增 `lib/runtime-config.ts`（`window.__APP_CONFIG__` > `VITE_*` > 同源默认），`api/client.ts`、`Simulator.tsx`、`lib/socket.ts` 统一改用它；`public/config.js` 打进 dist，nginx 对 config.js/index.html 禁缓存。**同一构建产物部署后只改 config.js 即可指向真实后端域名，无需重新打包**；已 `vite build` 复验 dist 含 config.js 且 index.html 最先加载。
+13. **复验结果**：server/web `tsc --noEmit` 均 0 错误、server `npm run build` exit 0、`jest` **6 套件 45 例全绿**、web `vite build` exit 0（3783 模块）。
+
 ## 五、遗留 Medium / Low 与建议（backlog）
 
-> 闸门 C 原 3 个 Medium（CTI 收口、默认密钥、报表缓存）已全部修复，下列为剩余项。
+> 闸门 C 原 3 个 Medium（CTI 收口、默认密钥、报表缓存）已全部修复；本轮又补齐了接口集成测试与 E2E 用例/CI。下列为剩余项。
 
 - [Medium] 超大组织（坐席数远超 200）用户/客户下拉改远程搜索——当前 pageSize 200/500 一次取，200 坐席规模无压力。
 - [Low] 首登强制改密；Token 改 httpOnly Cookie + Nginx CSP/Security Headers；CI 接 `npm audit` 与 `jest --coverage` 门禁（80%+）。
-- [Low] 补集成测试 / 迁移回滚测试 / Playwright 主流程 E2E（需 PostgreSQL 环境）。
+- [Low] 在带浏览器+PostgreSQL 的环境（CI e2e job / compose）实际跑通 Playwright 6 例与迁移正向/回滚演练（本沙箱无浏览器/DB，未实跑）。
 - [Low] 关联名后端 include、审计/时间线游标分页。
 
-## 六、闸门 C 结论（修复后复审）
+## 六、闸门 C 结论（修复后复审 + 本轮追加）
 
-- 实测：后端 **33/33 单测通过**、server/web 类型检查均 0 错误、前后端生产构建均成功、Prisma schema 合法。
-- 安全：**0 Critical / 0 High / 0 未修复 Medium / 2 Low**（原 2 Medium 已修复并回归）。
+- 实测：后端 **6 套件 / 45 例（33 单测 + 12 HTTP 集成）全部通过**、server/web 类型检查均 0 错误、前后端生产构建均成功、Prisma schema 合法、dist 含运行时 config.js。
+- E2E：Playwright **6 例与 CI job 已就绪**，受沙箱限制未本机执行，已在文档标注并交由 CI/compose 运行，不把"已落盘"计作"已实跑"。
+- 安全：**0 Critical / 0 High / 0 未修复 Medium / 2 Low**（原 2 Medium 已修复并回归；本轮过滤器错误码派生进一步收敛了错误契约一致性）。
 - 性能：**0 Critical / 0 High / 1 规模化 Medium（200 坐席不触发）/ 2 Low**（原报表缓存 Medium 已修复）。
-- 已知验证边界：沙箱无 DB/Redis，集成测试与 E2E 未运行，已备容器环境与补测清单；容器镜像与 compose 未在本机实跑（无 Docker）。
-- 用户选择「先修复 Medium 再交付」，三项 Medium 已清零，**据此进入 Phase 5 交付**。
+- 已知验证边界：沙箱无 DB/Redis/浏览器/Docker，E2E 与迁移对真库演练、容器镜像实跑未在本机执行，已备 CI e2e job、compose 与补测清单。
+- 用户选择「先修复 Medium 再交付」并追加「补集成/E2E + 前端按真实后端域名打包」，均已落实，**据此进入/维持 Phase 5 交付**。

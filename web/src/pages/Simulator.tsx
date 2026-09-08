@@ -2,8 +2,9 @@ import { useRef, useState } from 'react';
 import { Row, Col, Card, Button, Input, Space, Tag, Typography, Alert } from 'antd';
 import { PhoneOutlined, MessageOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import { RUNTIME } from '../lib/runtime-config';
 
-const BASE = import.meta.env.VITE_API_BASE || '/api/v1';
+const BASE = RUNTIME.apiBase;
 
 interface Msg { who: 'bot' | 'customer' | 'sys'; text: string }
 const QUICK = ['你们这个多少钱', '想预约一个产品演示，我电话13911112222', '转人工', '支持多少坐席', '我姓王，来自星河制造有限公司'];

@@ -26,7 +26,11 @@ export class HealthController {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
     } catch (e) {
-      throw new ServiceUnavailableException({ status: 'not-ready', database: 'down', error: (e as Error).message });
+      throw new ServiceUnavailableException({
+        code: 'NOT_READY',
+        message: '依赖未就绪：数据库不可达',
+        details: { database: 'down', error: (e as Error).message },
+      });
     }
     return { status: 'ok', database: 'up', cache: this.redis.mode, ts: Date.now() };
   }
