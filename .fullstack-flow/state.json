@@ -65,7 +65,9 @@
   "delivery": {
     "github_repo": "https://github.com/lqh1314/ai-demo-hub-platform",
     "repo_visibility": "public",
-    "remote_files": 136,
+    "remote_files": 137,
+    "edgeone_landing": "https://mcp.edgeone.site/share/vfwhu0qMJ9Mxwdi0lyLr4",
+    "edgeone_note": "EdgeOne Pages 连接器仅支持 deploy-html 单文件，故部署自包含产品入口页 landing.html；Vite 多资源 SPA 需用 EdgeOne 常规站点托管 web/dist 并将 /api 指向后端",
     "ci_note": "保存的PAT仅public_repo无workflow权限，.github/workflows/ci.yml仅存本地工程，需带workflow scope令牌补推或网页上传",
     "stray_repos": ["lqh1314/ai-demo-hub(公开,内容同上缺ci,建议网页删除)", "lqh1314/ai-demo-hub-callbot-workbench(私有空仓,建议网页删除)"]
   },
