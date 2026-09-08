@@ -1,0 +1,17 @@
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #f2f4f8; color: #1f2329; }
+.page-card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
+.page-title { font-size: 16px; font-weight: 700; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+.muted { color: #97a0af; }
+.stat-num { font-size: 26px; font-weight: 700; line-height: 1.2; }
+.chat-bubble { max-width: 78%; padding: 8px 12px; border-radius: 10px; margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
+.chat-bot { background: #eef3ff; align-self: flex-start; border-bottom-left-radius: 2px; }
+.chat-customer { background: #e8f7ee; align-self: flex-end; border-bottom-right-radius: 2px; }
+.chat-agent { background: #fff4e6; align-self: flex-start; border-bottom-left-radius: 2px; }
+.chat-col { display: flex; flex-direction: column; }
+.scroll-y { overflow-y: auto; }
+@media (max-width: 768px) {
+  .stat-num { font-size: 22px; }
+  .ant-table { font-size: 12px; }
+}

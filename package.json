@@ -1,0 +1,24 @@
+{
+  "name": "ai-demo-hub-callbot-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "description": "接线机器人 + 电销工作台 全链路平台（AI Demo Hub 方案部署）",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "prisma:generate": "npm run prisma:generate --workspace server",
+    "prisma:migrate": "npm run prisma:migrate --workspace server",
+    "prisma:seed": "npm run prisma:seed --workspace server",
+    "dev:server": "npm run start:dev --workspace server",
+    "dev:web": "npm run dev --workspace web",
+    "build": "npm run build --workspace server && npm run build --workspace web",
+    "test": "npm run test --workspace server",
+    "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace web"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

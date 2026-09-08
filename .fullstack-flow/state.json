@@ -1,0 +1,54 @@
+{
+  "feature": "接线机器人+电销工作台 全链路方案（AI Demo Hub 方案部署）",
+  "status": "in_progress",
+  "project_type": "greenfield",
+  "target_kind": "C-生产系统（真实语音线路/ASR/TTS/坐席账号权限）",
+  "business": "To-B SaaS 获客",
+  "flow": "A 智能接线+人工电销跟进：呼入->AI接听/多轮/FAQ->意向识别->留资建档/转人工->派单->坐席工作台(画像/转写/AI小结/待办)->外呼跟进->推进阶段至成交",
+  "stack": {
+    "frontend": "React18+TS+Vite5+AntD5+ReactQuery5+Zustand+ECharts+Socket.IO",
+    "backend": "NestJS+TS+Prisma5+Socket.IO",
+    "database": "PostgreSQL15(中文物理名)+Redis7(可选内存降级)",
+    "test": "Jest(ts-jest) 纯函数单测 23 例",
+    "infra": "DockerCompose(pg/redis/api/web-nginx)，前端可选 EdgeOne Pages"
+  },
+  "complexity": "complex",
+  "current_phase": 4,
+  "qa": {
+    "q1_audience": "C 生产系统",
+    "q2_flow": "A，To-B SaaS 获客",
+    "q3_accept": "A；200+坐席；需要管理端报表",
+    "q4_scope": "直接做好-全纳入，外部依赖适配层占位"
+  },
+  "completed_phases": [
+    1,
+    2,
+    3
+  ],
+  "files_created": [
+    ".fullstack-flow/state.json",
+    ".fullstack-flow/01-requirements.md",
+    ".fullstack-flow/02-database-design.md",
+    ".fullstack-flow/03-architecture.md",
+    ".fullstack-flow/07-testing.md",
+    "README.md",
+    ".env.example",
+    ".gitignore",
+    "docker-compose.yml",
+    "server/Dockerfile",
+    "web/Dockerfile",
+    "web/nginx.conf"
+  ],
+  "started_at": "2026-09-08T01:24:24Z",
+  "last_updated": "2026-09-08T03:30:00Z",
+  "phase3_result": "后端tsc0错误+23单测全绿；前端17页面齐全，tsc0错误+vite build成功(已分包)",
+  "gate_C_status": "pending_user_approval",
+  "gate_C_summary": "0Critical/0High；安全2Medium(CTI公开收口/默认密钥)+2Low；性能2Medium+3Low；无DB故集成/E2E未跑已列补测",
+  "acceptance": "A 业务闭环全真实+语音Provider适配层(先接1家)",
+  "agent_scale": "200+",
+  "admin_report": true,
+  "scope_decision": "全功能平台一次做全；外部能力走适配层+沙箱；H5替代原生App",
+  "gate_A_approved_at": "2026-09-08T01:52:28Z",
+  "gate_B_approved_at": "2026-09-08T02:04:16Z",
+  "naming_constraint": "物理表名/字段名/枚举值中文(Prisma @@map/@map)，代码层英文标识"
+}

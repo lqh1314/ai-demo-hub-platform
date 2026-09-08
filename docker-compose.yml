@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: aihub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo123
+      POSTGRES_DB: ai_demo_hub
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d ai_demo_hub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: aihub-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build: ./server
+    container_name: aihub-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # 一键离线演示默认 development（允许内置沙箱与演示入口）；
+      # 真实生产部署请在 .env 设置 NODE_ENV=production 并提供高强度 JWT_SECRET/JWT_REFRESH_SECRET/CREDENTIAL_KEY，
+      # 否则启动安全闸门会拒绝用占位密钥启动（见 server/src/common/security.ts）。
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DATABASE_URL: postgresql://demo:demo123@postgres:5432/ai_demo_hub?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change-me-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-secret}
+      CREDENTIAL_KEY: ${CREDENTIAL_KEY:-change-me-credential-master-key}
+      CTI_WEBHOOK_SECRET: ${CTI_WEBHOOK_SECRET:-}
+      ALLOW_DEMO_INBOUND: ${ALLOW_DEMO_INBOUND:-true}
+      DEFAULT_TENANT_ID: 00000000-0000-0000-0000-000000000001
+    ports:
+      - "3000:3000"
+    # 启动顺序：先迁移（migrate deploy）-> 幂等种子（演示账号/沙箱数据）-> 起服务
+    command: sh -c "npx prisma migrate deploy && node dist/prisma/seed.js && node dist/src/main.js"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:3000/api/v1/health/live',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  web:
+    build: ./web
+    container_name: aihub-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
+  redisdata:

@@ -1,0 +1,1197 @@
+// 接线机器人 + 电销工作台 全链路平台 · Prisma 数据模型
+// 硬约束：物理表名/字段名/枚举值一律中文（@@map / @map 的字符串即数据库真实名称）。
+// Prisma 标识符（model/字段/enum 成员）仅允许 ASCII，故代码侧用英文，数据库侧全部为中文。
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== 枚举（成员英文，数据库值中文） =====================
+enum TenantStatus {
+  ENABLED  @map("启用")
+  DISABLED @map("停用")
+
+  @@map("枚举_租户状态")
+}
+
+enum UserStatus {
+  PENDING  @map("待激活")
+  ACTIVE   @map("启用")
+  DISABLED @map("停用")
+
+  @@map("枚举_用户状态")
+}
+
+enum RoleAlias {
+  ADMIN   @map("管理员")
+  MANAGER @map("主管")
+  AGENT   @map("坐席")
+
+  @@map("枚举_角色别名")
+}
+
+enum AssignStrategy {
+  ROUND_ROBIN @map("轮询")
+  LEAST_LOAD  @map("最少负载")
+  SKILL_MATCH @map("技能匹配")
+
+  @@map("枚举_派单策略")
+}
+
+enum LeadStage {
+  NEW       @map("新线索")
+  FOLLOWING @map("跟进中")
+  CONVERTED @map("已转化")
+  INVALID   @map("无效")
+  LOST      @map("已流失")
+
+  @@map("枚举_线索阶段")
+}
+
+enum LeadSource {
+  HOTLINE  @map("热线")
+  BOT      @map("机器人接入")
+  WEB      @map("官网")
+  FORM     @map("表单")
+  AD       @map("广告")
+  REFERRAL @map("转介绍")
+  IMPORT   @map("导入")
+  MANUAL   @map("手工")
+  OUTBOUND @map("外呼")
+
+  @@map("枚举_线索来源")
+}
+
+enum IntentLevel {
+  HIGH    @map("高")
+  MIDDLE  @map("中")
+  LOW     @map("低")
+  UNKNOWN @map("未知")
+
+  @@map("枚举_意向等级")
+}
+
+enum CompanyScale {
+  SCALE_A @map("2000人以上")
+  SCALE_B @map("500-2000人")
+  SCALE_C @map("100-500人")
+  SCALE_D @map("20-100人")
+  SCALE_E @map("20人以下")
+
+  @@map("枚举_客户规模")
+}
+
+enum CustomerLevel {
+  KA     @map("KA客户")
+  BIG    @map("大客户")
+  MIDDLE @map("中型客户")
+  SMALL  @map("小微客户")
+
+  @@map("枚举_客户等级")
+}
+
+enum DecisionRole {
+  DECIDER    @map("决策者")
+  INFLUENCER @map("影响者")
+  USER       @map("使用者")
+  GATEKEEPER @map("把关者")
+
+  @@map("枚举_决策角色")
+}
+
+enum OppStage {
+  NEED_CONFIRM @map("需求确认")
+  NEED_DIG     @map("需求挖掘")
+  SOLUTION     @map("方案")
+  QUOTE        @map("报价")
+  NEGOTIATE    @map("谈判")
+  WON          @map("赢单")
+  LOST         @map("输单")
+
+  @@map("枚举_商机阶段")
+}
+
+enum ActivityType {
+  CALL   @map("通话")
+  NOTE   @map("跟进备注")
+  VISIT  @map("拜访")
+  EMAIL  @map("邮件")
+  WECHAT @map("企微")
+  STAGE  @map("阶段变更")
+  SYSTEM @map("系统")
+
+  @@map("枚举_动态类型")
+}
+
+enum TaskStatus {
+  TODO     @map("待办")
+  DONE     @map("已完成")
+  CANCELED @map("已取消")
+
+  @@map("枚举_任务状态")
+}
+
+enum TaskPriority {
+  LOW    @map("低")
+  NORMAL @map("普通")
+  HIGH   @map("高")
+  URGENT @map("紧急")
+
+  @@map("枚举_任务优先级")
+}
+
+enum CallDirection {
+  INBOUND  @map("呼入")
+  OUTBOUND @map("呼出")
+
+  @@map("枚举_通话方向")
+}
+
+enum CallStatus {
+  RINGING      @map("振铃")
+  QUEUE        @map("排队中")
+  BOT          @map("机器人接听")
+  TRANSFERRING @map("转接中")
+  AGENT_TALK   @map("人工通话")
+  WRAP         @map("话后处理")
+  ENDED        @map("已结束")
+  MISSED       @map("未接")
+  FAILED       @map("呼叫失败")
+
+  @@map("枚举_通话状态")
+}
+
+enum CallDisposition {
+  INTENT      @map("有意向")
+  FOLLOW      @map("待跟进")
+  NO_ANSWER   @map("未接通")
+  BUSY        @map("占线")
+  REJECT      @map("拒绝")
+  INVALID_NUM @map("无效号码")
+  OTHER       @map("其他")
+
+  @@map("枚举_通话结果")
+}
+
+enum Speaker {
+  BOT      @map("机器人")
+  AGENT    @map("坐席")
+  CUSTOMER @map("客户")
+
+  @@map("枚举_话者")
+}
+
+enum AgentStatus {
+  OFFLINE @map("离线")
+  ONLINE  @map("在线")
+  IDLE    @map("空闲")
+  BUSY    @map("忙碌")
+  ON_CALL @map("通话中")
+  AFTER   @map("话后")
+  BREAK   @map("小休")
+
+  @@map("枚举_坐席状态")
+}
+
+enum QueueState {
+  WAITING  @map("等待分配")
+  ASSIGNED @map("已分配")
+  TIMEOUT  @map("超时")
+  CLOSED   @map("已关闭")
+
+  @@map("枚举_队列状态")
+}
+
+enum KnowledgeStatus {
+  DRAFT     @map("草稿")
+  PUBLISHED @map("已发布")
+  ARCHIVED  @map("已归档")
+
+  @@map("枚举_知识状态")
+}
+
+enum BotAction {
+  ANSWER   @map("直接回答")
+  TRANSFER @map("转人工")
+  COLLECT  @map("收集线索")
+  FLOW     @map("进入话术")
+
+  @@map("枚举_机器人动作")
+}
+
+enum BotOutcome {
+  SOLVED    @map("已解决")
+  LEFT_INFO @map("已留资")
+  TO_HUMAN  @map("转人工")
+  ABANDONED @map("客户放弃")
+
+  @@map("枚举_机器人结果")
+}
+
+enum CampaignStatus {
+  DRAFT    @map("草稿")
+  RUNNING  @map("进行中")
+  PAUSED   @map("已暂停")
+  FINISHED @map("已完成")
+  CANCELED @map("已取消")
+
+  @@map("枚举_外呼状态")
+}
+
+enum DialStrategy {
+  MANUAL     @map("手动")
+  PREVIEW    @map("预览")
+  PREDICTIVE @map("预测式")
+
+  @@map("枚举_拨号策略")
+}
+
+enum TargetState {
+  PENDING    @map("待拨打")
+  QUEUE      @map("排队中")
+  DIALING    @map("拨打中")
+  CONNECTED  @map("已接通")
+  NO_CONNECT @map("未接通")
+  FAILED     @map("失败")
+  FOLLOW     @map("待跟进")
+  BLACKLIST  @map("黑名单")
+
+  @@map("枚举_目标状态")
+}
+
+enum QaRuleType {
+  KEYWORD @map("关键词")
+  SCRIPT  @map("话术")
+  REGEX   @map("正则")
+  SILENCE @map("静音")
+  EMOTION @map("情绪")
+  SPEED   @map("语速")
+
+  @@map("枚举_质检规则类型")
+}
+
+enum QaStatus {
+  AI             @map("AI初检")
+  PENDING_REVIEW @map("待复检")
+  REVIEWED       @map("已复检")
+  APPEAL         @map("申诉中")
+
+  @@map("枚举_质检状态")
+}
+
+enum QaType {
+  AUTO   @map("智能质检")
+  MANUAL @map("人工质检")
+
+  @@map("枚举_质检类型")
+}
+
+enum ContractStatus {
+  DRAFT       @map("草稿")
+  SIGNED      @map("已签署")
+  IN_PROGRESS @map("履约中")
+  COMPLETED   @map("已完成")
+  TERMINATED  @map("已终止")
+
+  @@map("枚举_合同状态")
+}
+
+enum PaymentStatus {
+  PLANNED  @map("计划中")
+  RECEIVED @map("已回款")
+  OVERDUE  @map("逾期")
+  PARTIAL  @map("部分回款")
+
+  @@map("枚举_回款状态")
+}
+
+enum ChannelType {
+  SMS    @map("短信")
+  EMAIL  @map("邮件")
+  WECHAT @map("企微")
+
+  @@map("枚举_通道类型")
+}
+
+enum MessageStatus {
+  QUEUED    @map("排队")
+  SENT      @map("已发送")
+  DELIVERED @map("已送达")
+  FAILED    @map("失败")
+  READ      @map("已读")
+
+  @@map("枚举_消息状态")
+}
+
+enum ProviderType {
+  TELEPHONY @map("语音线路")
+  ASR       @map("语音识别")
+  TTS       @map("语音合成")
+  LLM       @map("大模型")
+  SMS       @map("短信")
+  EMAIL     @map("邮件通道")
+  WECHAT    @map("企微通道")
+
+  @@map("枚举_供应商类型")
+}
+
+enum AuditActor {
+  USER   @map("用户")
+  API    @map("开放接口")
+  SYSTEM @map("系统")
+
+  @@map("枚举_审计主体")
+}
+
+// ===================== A. 组织与权限 IAM =====================
+model Tenant {
+  id        String       @id @default(uuid()) @map("租户编号")
+  name      String       @map("租户名称")
+  plan      String?      @map("套餐")
+  status    TenantStatus @default(ENABLED) @map("状态")
+  locale    String       @default("zh-CN") @map("默认语言")
+  createdAt DateTime     @default(now()) @map("创建时间")
+  updatedAt DateTime     @updatedAt @map("更新时间")
+
+  @@map("租户")
+}
+
+model Dept {
+  id        String    @id @default(uuid()) @map("部门编号")
+  tenantId  String    @map("租户编号")
+  parentId  String?   @map("上级部门编号")
+  name      String    @map("部门名称")
+  path      String?   @map("层级路径")
+  sort      Int       @default(0) @map("排序")
+  parent    Dept?     @relation("部门树", fields: [parentId], references: [id])
+  children  Dept[]    @relation("部门树")
+  users     User[]
+  createdAt DateTime  @default(now()) @map("创建时间")
+  updatedAt DateTime  @updatedAt @map("更新时间")
+  deletedAt DateTime? @map("删除时间")
+
+  @@index([tenantId, parentId])
+  @@map("部门")
+}
+
+model User {
+  id           String     @id @default(uuid()) @map("用户编号")
+  tenantId     String     @map("租户编号")
+  deptId       String?    @map("部门编号")
+  managerId    String?    @map("直属主管编号")
+  username     String     @map("登录账号")
+  email        String?    @map("邮箱")
+  passwordHash String     @map("密码哈希")
+  realName     String     @map("姓名")
+  avatarUrl    String?    @map("头像")
+  mobile       String?    @map("手机号")
+  roleAlias    RoleAlias  @default(AGENT) @map("角色别名")
+  status       UserStatus @default(PENDING) @map("状态")
+  jobNo        String?    @map("工号")
+  failCount    Int        @default(0) @map("登录失败次数")
+  lockedUntil  DateTime?  @map("锁定截止")
+  lastLoginAt  DateTime?  @map("最近登录时间")
+  dept         Dept?      @relation(fields: [deptId], references: [id])
+  manager      User?      @relation("汇报关系", fields: [managerId], references: [id])
+  subordinates User[]     @relation("汇报关系")
+  createdAt    DateTime   @default(now()) @map("创建时间")
+  updatedAt    DateTime   @updatedAt @map("更新时间")
+  deletedAt    DateTime?  @map("删除时间")
+
+  @@unique([tenantId, username])
+  @@unique([tenantId, email])
+  @@index([tenantId, deptId])
+  @@map("坐席账号")
+}
+
+model Role {
+  id              String           @id @default(uuid()) @map("角色编号")
+  tenantId        String?          @map("租户编号")
+  code            String           @unique @map("角色编码")
+  name            String           @map("角色名称")
+  isSystem        Boolean          @default(false) @map("系统内置")
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+  createdAt       DateTime         @default(now()) @map("创建时间")
+
+  @@map("角色")
+}
+
+model Permission {
+  id              String           @id @default(uuid()) @map("权限编号")
+  code            String           @unique @map("权限编码")
+  name            String           @map("权限名称")
+  module          String           @map("所属模块")
+  action          String           @map("动作")
+  rolePermissions RolePermission[]
+
+  @@map("权限")
+}
+
+model RolePermission {
+  roleId       String     @map("角色编号")
+  permissionId String     @map("权限编号")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("角色权限")
+}
+
+model UserRole {
+  userId    String   @map("用户编号")
+  roleId    String   @map("角色编号")
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("创建时间")
+
+  @@id([userId, roleId])
+  @@map("用户角色")
+}
+
+model SkillGroup {
+  id              String             @id @default(uuid()) @map("技能组编号")
+  tenantId        String             @map("租户编号")
+  name            String             @map("技能组名称")
+  strategy        AssignStrategy     @default(ROUND_ROBIN) @map("分配策略")
+  priority        Int                @default(100) @map("优先级")
+  overflowSeconds Int                @default(30) @map("溢出秒数")
+  members         SkillGroupMember[]
+  intents         Intent[]
+  lines           PhoneLine[]
+  leads           Lead[]
+  queues          DispatchQueue[]
+  calls           CallSession[]
+  campaigns       Campaign[]
+  createdAt       DateTime           @default(now()) @map("创建时间")
+  updatedAt       DateTime           @updatedAt @map("更新时间")
+  deletedAt       DateTime?          @map("删除时间")
+
+  @@index([tenantId])
+  @@map("技能组")
+}
+
+model SkillGroupMember {
+  groupId    String     @map("技能组编号")
+  userId     String     @map("用户编号")
+  skillLevel Int        @default(1) @map("技能等级")
+  group      SkillGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@map("技能组成员")
+}
+
+// ===================== B. 客户 CRM =====================
+model Lead {
+  id           String          @id @default(uuid()) @map("线索编号")
+  tenantId     String          @map("租户编号")
+  name         String?         @map("客户姓名")
+  company      String?         @map("公司名称")
+  phoneE164    String?         @map("规范号码")
+  phoneRaw     String?         @map("原始号码")
+  email        String?         @map("邮箱")
+  source       LeadSource      @default(HOTLINE) @map("来源")
+  intentLevel  IntentLevel     @default(UNKNOWN) @map("意向等级")
+  intentTags   String[]        @map("意向标签")
+  ownerId      String?         @map("负责人编号")
+  groupId      String?         @map("技能组编号")
+  stage        LeadStage       @default(NEW) @map("线索阶段")
+  customerId   String?         @map("转化客户编号")
+  contactId    String?         @map("关联联系人编号")
+  firstCallId  String?         @map("首次通话编号")
+  lastCallId   String?         @map("最近通话编号")
+  lastFollowAt DateTime?       @map("最近跟进时间")
+  convertedAt  DateTime?       @map("转化时间")
+  rawPayload   Json?           @map("原始留资")
+  customer     Customer?       @relation(fields: [customerId], references: [id])
+  contact      Contact?        @relation(fields: [contactId], references: [id])
+  group        SkillGroup?     @relation(fields: [groupId], references: [id])
+  queues       DispatchQueue[]
+  calls        CallSession[]
+  createdAt    DateTime        @default(now()) @map("创建时间")
+  updatedAt    DateTime        @updatedAt @map("更新时间")
+  deletedAt    DateTime?       @map("删除时间")
+
+  @@index([tenantId, phoneE164])
+  @@index([tenantId, ownerId, stage])
+  @@index([tenantId, stage, updatedAt])
+  @@map("线索")
+}
+
+model Customer {
+  id            String           @id @default(uuid()) @map("客户编号")
+  tenantId      String           @map("租户编号")
+  ownerId       String?          @map("负责人编号")
+  name          String           @map("客户名称")
+  creditCode    String?          @map("统一社会信用代码")
+  industry      String?          @map("行业")
+  scale         CompanyScale?    @map("企业规模")
+  website       String?          @map("官网")
+  area          String?          @map("地区")
+  address       String?          @map("地址")
+  source        LeadSource?      @map("来源")
+  stage         LeadStage        @default(NEW) @map("客户阶段")
+  level         CustomerLevel?   @map("客户等级")
+  lastFollowAt  DateTime?        @map("最近跟进时间")
+  nextFollowAt  DateTime?        @map("下次跟进时间")
+  remark        Json?            @map("扩展信息")
+  leads         Lead[]
+  contacts      Contact[]
+  opportunities Opportunity[]
+  calls         CallSession[]
+  contracts     Contract[]
+  targets       CampaignTarget[]
+  createdAt     DateTime         @default(now()) @map("创建时间")
+  updatedAt     DateTime         @updatedAt @map("更新时间")
+  deletedAt     DateTime?        @map("删除时间")
+
+  @@index([tenantId, ownerId, updatedAt])
+  @@index([tenantId, name])
+  @@map("客户")
+}
+
+model Contact {
+  id            String           @id @default(uuid()) @map("联系人编号")
+  tenantId      String           @map("租户编号")
+  customerId    String           @map("客户编号")
+  name          String           @map("联系人姓名")
+  title         String?          @map("职务")
+  phoneE164     String?          @map("规范号码")
+  phoneRaw      String?          @map("原始号码")
+  email         String?          @map("邮箱")
+  wechat        String?          @map("企微号")
+  isPrimary     Boolean          @default(false) @map("是否主联系人")
+  decisionRole  DecisionRole?    @map("决策角色")
+  remark        String?          @map("备注")
+  customer      Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  leads         Lead[]
+  opportunities Opportunity[]
+  calls         CallSession[]
+  targets       CampaignTarget[]
+  createdAt     DateTime         @default(now()) @map("创建时间")
+  updatedAt     DateTime         @updatedAt @map("更新时间")
+  deletedAt     DateTime?        @map("删除时间")
+
+  @@index([tenantId, phoneE164])
+  @@index([customerId])
+  @@map("联系人")
+}
+
+model Opportunity {
+  id             String      @id @default(uuid()) @map("商机编号")
+  tenantId       String      @map("租户编号")
+  customerId     String      @map("客户编号")
+  contactId      String?     @map("联系人编号")
+  ownerId        String?     @map("负责人编号")
+  name           String      @map("商机名称")
+  stage          OppStage    @default(NEED_CONFIRM) @map("商机阶段")
+  amount         Decimal?    @map("预计金额") @db.Decimal(14, 2)
+  probability    Int         @default(0) @map("赢单概率")
+  expectedClose  DateTime?   @map("预计成交时间")
+  winReason      String?     @map("赢单原因")
+  lostReason     String?     @map("输单原因")
+  stageChangedAt DateTime?   @map("阶段变更时间")
+  source         LeadSource? @map("来源")
+  customer       Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  contact        Contact?    @relation(fields: [contactId], references: [id])
+  contracts      Contract[]
+  createdAt      DateTime    @default(now()) @map("创建时间")
+  updatedAt      DateTime    @updatedAt @map("更新时间")
+  deletedAt      DateTime?   @map("删除时间")
+
+  @@index([tenantId, ownerId, stage])
+  @@index([tenantId, stage])
+  @@map("商机")
+}
+
+model Activity {
+  id          String       @id @default(uuid()) @map("动态编号")
+  tenantId    String       @map("租户编号")
+  creatorId   String?      @map("创建人编号")
+  type        ActivityType @default(NOTE) @map("动态类型")
+  relatedType String       @map("关联对象类型")
+  relatedId   String       @map("关联对象编号")
+  content     String       @default("") @map("内容")
+  callId      String?      @map("通话编号")
+  direction   String?      @map("方向")
+  durationSec Int?         @map("时长秒")
+  stageFrom   String?      @map("变更前阶段")
+  stageTo     String?      @map("变更后阶段")
+  happenedAt  DateTime     @default(now()) @map("发生时间")
+  call        CallSession? @relation(fields: [callId], references: [id])
+
+  @@index([relatedType, relatedId, happenedAt])
+  @@index([tenantId, creatorId])
+  @@map("跟进动态")
+}
+
+model TodoTask {
+  id          String       @id @default(uuid()) @map("任务编号")
+  tenantId    String       @map("租户编号")
+  ownerId     String       @map("负责人编号")
+  creatorId   String?      @map("创建人编号")
+  relatedType String?      @map("关联对象类型")
+  relatedId   String?      @map("关联对象编号")
+  title       String       @map("任务标题")
+  content     String?      @map("任务内容")
+  priority    TaskPriority @default(NORMAL) @map("优先级")
+  status      TaskStatus   @default(TODO) @map("状态")
+  dueAt       DateTime?    @map("截止时间")
+  remindAt    DateTime?    @map("提醒时间")
+  finishedAt  DateTime?    @map("完成时间")
+  result      String?      @map("完成结果")
+  createdAt   DateTime     @default(now()) @map("创建时间")
+  updatedAt   DateTime     @updatedAt @map("更新时间")
+
+  @@index([tenantId, ownerId, status, dueAt])
+  @@map("待办任务")
+}
+
+// ===================== C. 通话与实时 =====================
+model PhoneLine {
+  id               String        @id @default(uuid()) @map("线路编号")
+  tenantId         String        @map("租户编号")
+  provider         String        @default("sandbox") @map("供应商标识")
+  numberE164       String        @map("接入号码")
+  label            String        @map("线路名称")
+  groupId          String?       @map("默认技能组")
+  concurrencyLimit Int           @default(50) @map("并发上限")
+  enabled          Boolean       @default(true) @map("是否启用")
+  group            SkillGroup?   @relation(fields: [groupId], references: [id])
+  campaigns        Campaign[]
+  calls            CallSession[]
+  createdAt        DateTime      @default(now()) @map("创建时间")
+
+  @@index([tenantId])
+  @@map("电话线路")
+}
+
+model CallSession {
+  id                String              @id @default(uuid()) @map("通话编号")
+  tenantId          String              @map("租户编号")
+  lineId            String?             @map("线路编号")
+  providerRef       String?             @map("供应商通话号")
+  direction         CallDirection       @map("方向")
+  fromNo            String?             @map("主叫号码")
+  toNo              String?             @map("被叫号码")
+  phoneE164         String?             @map("对端规范号码")
+  customerId        String?             @map("客户编号")
+  contactId         String?             @map("联系人编号")
+  leadId            String?             @map("线索编号")
+  agentId           String?             @map("坐席编号")
+  transferFromAgent String?             @map("转接来源坐席")
+  groupId           String?             @map("技能组编号")
+  campaignTargetId  String?             @map("外呼名单编号")
+  status            CallStatus          @map("通话状态")
+  disposition       CallDisposition?    @map("通话结果")
+  isBotHandled      Boolean             @default(false) @map("是否机器人处理")
+  transferred       Boolean             @default(false) @map("是否转接")
+  queueEnterAt      DateTime?           @map("入队时间")
+  answerAt          DateTime?           @map("接听时间")
+  endAt             DateTime?           @map("结束时间")
+  durationSec       Int                 @default(0) @map("总时长秒")
+  talkSec           Int                 @default(0) @map("通话秒数")
+  waitSec           Int                 @default(0) @map("等待秒数")
+  hangupBy          String?             @map("挂断方")
+  recordingUrl      String?             @map("录音地址")
+  transcriptText    String?             @map("完整转写")
+  aiSummary         Json?               @map("AI小结")
+  aiIntent          String?             @map("识别意图")
+  aiSlots           Json?               @map("槽位")
+  sentiment         String?             @map("情绪")
+  raw               Json?               @map("供应商原始数据")
+  line              PhoneLine?          @relation(fields: [lineId], references: [id])
+  customer          Customer?           @relation(fields: [customerId], references: [id])
+  contact           Contact?            @relation(fields: [contactId], references: [id])
+  lead              Lead?               @relation(fields: [leadId], references: [id])
+  group             SkillGroup?         @relation(fields: [groupId], references: [id])
+  campaignTarget    CampaignTarget?     @relation(fields: [campaignTargetId], references: [id])
+  segments          TranscriptSegment[]
+  activities        Activity[]
+  qaRecord          QaRecord?
+  botSession        BotSession?
+  queue             DispatchQueue?
+  createdAt         DateTime            @default(now()) @map("创建时间")
+  updatedAt         DateTime            @updatedAt @map("更新时间")
+
+  @@index([tenantId, agentId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, groupId, status])
+  @@index([tenantId, phoneE164])
+  @@map("通话会话")
+}
+
+model TranscriptSegment {
+  id         String      @id @default(uuid()) @map("片段编号")
+  tenantId   String      @map("租户编号")
+  callId     String      @map("通话编号")
+  seq        Int         @map("序号")
+  speaker    Speaker     @map("话者")
+  text       String      @default("") @map("文本")
+  startMs    Int         @default(0) @map("开始毫秒")
+  endMs      Int         @default(0) @map("结束毫秒")
+  confidence Decimal?    @map("置信度") @db.Decimal(5, 4)
+  emotion    String?     @map("情绪")
+  audioUrl   String?     @map("切片音频")
+  call       CallSession @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  @@index([callId, seq])
+  @@map("转写片段")
+}
+
+model AgentStatusLog {
+  id         String       @id @default(uuid()) @map("日志编号")
+  tenantId   String       @map("租户编号")
+  userId     String       @map("坐席编号")
+  fromStatus AgentStatus? @map("原状态")
+  toStatus   AgentStatus  @map("新状态")
+  callId     String?      @map("相关通话")
+  at         DateTime     @default(now()) @map("发生时间")
+
+  @@index([userId, at])
+  @@map("坐席状态日志")
+}
+
+model DispatchQueue {
+  id         String         @id @default(uuid()) @map("队列编号")
+  tenantId   String         @map("租户编号")
+  groupId    String         @map("技能组编号")
+  leadId     String?        @map("线索编号")
+  callId     String?        @unique @map("通话编号")
+  phoneE164  String?        @map("规范号码")
+  priority   Int            @default(100) @map("优先级")
+  strategy   AssignStrategy @default(ROUND_ROBIN) @map("策略")
+  state      QueueState     @default(WAITING) @map("队列状态")
+  assignedTo String?        @map("指派坐席编号")
+  enqueueAt  DateTime       @default(now()) @map("入队时间")
+  assignAt   DateTime?      @map("指派时间")
+  ttlSec     Int            @default(30) @map("存活秒数")
+  group      SkillGroup     @relation(fields: [groupId], references: [id])
+  lead       Lead?          @relation(fields: [leadId], references: [id])
+  call       CallSession?   @relation(fields: [callId], references: [id])
+
+  @@index([tenantId, groupId, state, priority])
+  @@map("派单队列")
+}
+
+// ===================== D. 机器人与知识库 =====================
+model BotConfig {
+  id               String   @id @default(uuid()) @map("配置编号")
+  tenantId         String   @unique @map("租户编号")
+  name             String   @default("智能接线员") @map("机器人名称")
+  enabled          Boolean  @default(true) @map("是否启用")
+  welcomeText      String   @default("您好，这里是客户服务中心，请问有什么可以帮您？") @map("欢迎语")
+  fallbackText     String   @default("抱歉没有完全理解，我为您转接人工顾问请稍等。") @map("兜底话术")
+  model            Json?    @map("模型配置")
+  voice            Json?    @map("音色配置")
+  transferKeywords String[] @map("转人工关键词")
+  idleTimeoutSec   Int      @default(12) @map("静默超时秒")
+  maxBotTurns      Int      @default(20) @map("最大轮次")
+  workingHours     Json?    @map("工作时间")
+  afterHoursAction String   @default("BOT") @map("非工作时间策略")
+  updatedAt        DateTime @updatedAt @map("更新时间")
+
+  @@map("机器人配置")
+}
+
+model Intent {
+  id            String      @id @default(uuid()) @map("意图编号")
+  tenantId      String      @map("租户编号")
+  name          String      @map("意图名称")
+  code          String      @map("意图编码")
+  examples      String[]    @map("语料示例")
+  keywords      String[]    @map("关键词")
+  slots         Json?       @map("槽位定义")
+  action        BotAction   @default(ANSWER) @map("命中动作")
+  answer        String?     @map("回答话术")
+  targetGroupId String?     @map("转接技能组")
+  nextIntent    String?     @map("后续意图")
+  enabled       Boolean     @default(true) @map("是否启用")
+  priority      Int         @default(100) @map("优先级")
+  targetGroup   SkillGroup? @relation(fields: [targetGroupId], references: [id])
+  createdAt     DateTime    @default(now()) @map("创建时间")
+  updatedAt     DateTime    @updatedAt @map("更新时间")
+
+  @@index([tenantId, enabled])
+  @@map("意图")
+}
+
+model KnowledgeBase {
+  id          String          @id @default(uuid()) @map("知识库编号")
+  tenantId    String          @map("租户编号")
+  name        String          @map("知识库名称")
+  description String?         @map("描述")
+  items       KnowledgeItem[]
+  createdAt   DateTime        @default(now()) @map("创建时间")
+
+  @@map("知识库")
+}
+
+model KnowledgeItem {
+  id          String          @id @default(uuid()) @map("条目编号")
+  tenantId    String          @map("租户编号")
+  kbId        String          @map("知识库编号")
+  question    String          @map("问题")
+  answer      String          @map("答案")
+  keywords    String[]        @map("关键词")
+  tags        String[]        @map("标签")
+  hitCount    Int             @default(0) @map("命中次数")
+  status      KnowledgeStatus @default(DRAFT) @map("状态")
+  version     Int             @default(1) @map("版本")
+  publishedAt DateTime?       @map("发布时间")
+  kb          KnowledgeBase   @relation(fields: [kbId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now()) @map("创建时间")
+  updatedAt   DateTime        @updatedAt @map("更新时间")
+
+  @@index([kbId, status])
+  @@map("知识条目")
+}
+
+model BotSession {
+  id               String      @id @default(uuid()) @map("会话编号")
+  tenantId         String      @map("租户编号")
+  callId           String      @unique @map("通话编号")
+  recognizedIntent String?     @map("识别意图")
+  slots            Json?       @map("收集槽位")
+  outcome          BotOutcome? @map("会话结果")
+  turnCount        Int         @default(0) @map("对话轮次")
+  summary          String?     @map("会话摘要")
+  call             CallSession @relation(fields: [callId], references: [id], onDelete: Cascade)
+  createdAt        DateTime    @default(now()) @map("创建时间")
+  updatedAt        DateTime    @updatedAt @map("更新时间")
+
+  @@map("机器人会话")
+}
+
+// ===================== E. 外呼 =====================
+model Campaign {
+  id              String           @id @default(uuid()) @map("任务编号")
+  tenantId        String           @map("租户编号")
+  ownerId         String?          @map("负责人编号")
+  name            String           @map("任务名称")
+  strategy        DialStrategy     @default(MANUAL) @map("拨号策略")
+  status          CampaignStatus   @default(DRAFT) @map("任务状态")
+  lineId          String?          @map("线路编号")
+  groupId         String?          @map("技能组编号")
+  callerNumber    String?          @map("主叫号码")
+  startAt         DateTime?        @map("开始时间")
+  endAt           DateTime?        @map("结束时间")
+  dailyLimit      Int              @default(200) @map("每日上限")
+  concurrency     Int              @default(10) @map("并发数")
+  predictiveRatio Decimal?         @default(1.2) @map("预测外拨系数") @db.Decimal(4, 2)
+  rule            Json?            @map("筛选规则")
+  stats           Json?            @map("统计快照")
+  line            PhoneLine?       @relation(fields: [lineId], references: [id])
+  group           SkillGroup?      @relation(fields: [groupId], references: [id])
+  targets         CampaignTarget[]
+  createdAt       DateTime         @default(now()) @map("创建时间")
+  updatedAt       DateTime         @updatedAt @map("更新时间")
+
+  @@index([tenantId, status])
+  @@map("外呼任务")
+}
+
+model CampaignTarget {
+  id         String        @id @default(uuid()) @map("名单编号")
+  tenantId   String        @map("租户编号")
+  campaignId String        @map("外呼任务编号")
+  customerId String?       @map("客户编号")
+  contactId  String?       @map("联系人编号")
+  phoneE164  String        @map("规范号码")
+  state      TargetState   @default(PENDING) @map("拨打状态")
+  attempts   Int           @default(0) @map("拨打次数")
+  lastCallId String?       @map("最近通话编号")
+  nextDialAt DateTime?     @map("下次拨打时间")
+  resultCode String?       @map("结果码")
+  custom     Json?         @map("自定义字段")
+  campaign   Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customer   Customer?     @relation(fields: [customerId], references: [id])
+  contact    Contact?      @relation(fields: [contactId], references: [id])
+  calls      CallSession[]
+  createdAt  DateTime      @default(now()) @map("创建时间")
+  updatedAt  DateTime      @updatedAt @map("更新时间")
+
+  @@unique([campaignId, phoneE164])
+  @@index([campaignId, state, nextDialAt])
+  @@map("外呼名单")
+}
+
+// ===================== F. 质检 =====================
+model QaRule {
+  id        String     @id @default(uuid()) @map("规则编号")
+  tenantId  String     @map("租户编号")
+  name      String     @map("规则名称")
+  type      QaRuleType @map("规则类型")
+  category  String?    @map("分类")
+  pattern   String[]   @map("匹配模式")
+  weight    Int        @default(5) @map("分值权重")
+  mustHit   Boolean    @default(false) @map("是否必达项")
+  enabled   Boolean    @default(true) @map("是否启用")
+  createdAt DateTime   @default(now()) @map("创建时间")
+
+  @@index([tenantId, enabled])
+  @@map("质检规则")
+}
+
+model QaRecord {
+  id         String      @id @default(uuid()) @map("质检编号")
+  tenantId   String      @map("租户编号")
+  callId     String      @unique @map("通话编号")
+  type       QaType      @default(AUTO) @map("质检类型")
+  status     QaStatus    @default(AI) @map("质检状态")
+  score      Int         @default(100) @map("质检得分")
+  reviewerId String?     @map("复检人编号")
+  reviewedAt DateTime?   @map("复检时间")
+  comment    String?     @map("复检意见")
+  call       CallSession @relation(fields: [callId], references: [id], onDelete: Cascade)
+  hits       QaHit[]
+  createdAt  DateTime    @default(now()) @map("创建时间")
+
+  @@index([tenantId, status])
+  @@index([callId])
+  @@map("质检记录")
+}
+
+model QaHit {
+  id          String   @id @default(uuid()) @map("命中编号")
+  tenantId    String   @map("租户编号")
+  qaRecordId  String   @map("质检记录编号")
+  ruleId      String   @map("规则编号")
+  segmentId   String?  @map("片段编号")
+  matchedText String?  @map("命中内容")
+  deduct      Int      @default(0) @map("扣分")
+  record      QaRecord @relation(fields: [qaRecordId], references: [id], onDelete: Cascade)
+
+  @@index([qaRecordId])
+  @@map("质检命中")
+}
+
+// ===================== G. 合同回款 =====================
+model Contract {
+  id            String         @id @default(uuid()) @map("合同编号")
+  tenantId      String         @map("租户编号")
+  opportunityId String         @map("商机编号")
+  customerId    String         @map("客户编号")
+  code          String         @map("合同编号编码")
+  name          String         @map("合同名称")
+  amount        Decimal?       @map("合同金额") @db.Decimal(14, 2)
+  signDate      DateTime?      @map("签署日期")
+  startDate     DateTime?      @map("开始日期")
+  endDate       DateTime?      @map("结束日期")
+  status        ContractStatus @default(DRAFT) @map("合同状态")
+  fileUrl       String?        @map("合同文件")
+  ownerId       String?        @map("负责人编号")
+  opportunity   Opportunity    @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  customer      Customer       @relation(fields: [customerId], references: [id])
+  payments      Payment[]
+  createdAt     DateTime       @default(now()) @map("创建时间")
+  updatedAt     DateTime       @updatedAt @map("更新时间")
+  deletedAt     DateTime?      @map("删除时间")
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+  @@map("合同")
+}
+
+model Payment {
+  id          String        @id @default(uuid()) @map("回款编号")
+  tenantId    String        @map("租户编号")
+  contractId  String        @map("合同编号")
+  amount      Decimal       @map("回款金额") @db.Decimal(14, 2)
+  plannedDate DateTime?     @map("计划日期")
+  actualDate  DateTime?     @map("实际到账日期")
+  status      PaymentStatus @default(PLANNED) @map("回款状态")
+  method      String?       @map("回款方式")
+  remark      String?       @map("备注")
+  contract    Contract      @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now()) @map("创建时间")
+
+  @@index([contractId])
+  @@map("回款记录")
+}
+
+// ===================== H. 营销触达 =====================
+model MessageTemplate {
+  id          String        @id @default(uuid()) @map("模板编号")
+  tenantId    String        @map("租户编号")
+  channel     ChannelType   @map("通道")
+  name        String        @map("模板名称")
+  title       String?       @map("标题")
+  content     String        @map("模板内容")
+  variables   String[]      @map("变量列表")
+  auditStatus String        @default("已通过") @map("审核状态")
+  tasks       MessageTask[]
+  createdAt   DateTime      @default(now()) @map("创建时间")
+  updatedAt   DateTime      @updatedAt @map("更新时间")
+
+  @@index([tenantId, channel])
+  @@map("消息模板")
+}
+
+model MessageTask {
+  id          String           @id @default(uuid()) @map("消息任务编号")
+  tenantId    String           @map("租户编号")
+  templateId  String?          @map("模板编号")
+  channel     ChannelType      @map("通道")
+  targetRule  Json?            @map("目标规则")
+  scheduledAt DateTime?        @map("计划发送时间")
+  status      String           @default("草稿") @map("任务状态")
+  ownerId     String?          @map("负责人编号")
+  stats       Json?            @map("统计快照")
+  template    MessageTemplate? @relation(fields: [templateId], references: [id])
+  records     MessageRecord[]
+  createdAt   DateTime         @default(now()) @map("创建时间")
+  updatedAt   DateTime         @updatedAt @map("更新时间")
+
+  @@index([tenantId, status])
+  @@map("消息任务")
+}
+
+model MessageRecord {
+  id            String        @id @default(uuid()) @map("消息记录编号")
+  tenantId      String        @map("租户编号")
+  taskId        String?       @map("消息任务编号")
+  channel       ChannelType   @map("通道")
+  toAddr        String        @map("接收方")
+  content       String        @map("发送内容")
+  status        MessageStatus @default(QUEUED) @map("发送状态")
+  providerMsgId String?       @map("供应商消息号")
+  provider      String        @default("sandbox") @map("供应商标识")
+  sendAt        DateTime?     @map("发送时间")
+  callback      Json?         @map("回执")
+  task          MessageTask?  @relation(fields: [taskId], references: [id])
+  createdAt     DateTime      @default(now()) @map("创建时间")
+
+  @@index([taskId, status])
+  @@index([tenantId, channel])
+  @@map("消息记录")
+}
+
+// ===================== I. 集成与系统 =====================
+model ProviderConfig {
+  id             String       @id @default(uuid()) @map("配置编号")
+  tenantId       String       @map("租户编号")
+  type           ProviderType @map("供应商类型")
+  code           String       @map("供应商标识")
+  name           String       @map("供应商名称")
+  enabled        Boolean      @default(false) @map("是否启用")
+  priority       Int          @default(100) @map("优先级")
+  credentialsEnc Bytes?       @map("加密凭证")
+  config         Json?        @map("非密配置")
+  createdAt      DateTime     @default(now()) @map("创建时间")
+  updatedAt      DateTime     @updatedAt @map("更新时间")
+
+  @@index([tenantId, type, enabled])
+  @@map("供应商配置")
+}
+
+model ApiKey {
+  id         String                @id @default(uuid()) @map("密钥编号")
+  tenantId   String                @map("租户编号")
+  ownerId    String?               @map("归属人编号")
+  name       String                @map("密钥名称")
+  ak         String                @unique @map("访问键")
+  skHash     String                @map("签名密钥哈希")
+  scopes     String[]              @map("授权范围")
+  enabled    Boolean               @default(true) @map("是否启用")
+  lastUsedAt DateTime?             @map("最近使用时间")
+  webhooks   WebhookSubscription[]
+  createdAt  DateTime              @default(now()) @map("创建时间")
+
+  @@map("开放密钥")
+}
+
+model WebhookSubscription {
+  id         String            @id @default(uuid()) @map("订阅编号")
+  tenantId   String            @map("租户编号")
+  apiKeyId   String            @map("密钥编号")
+  event      String            @map("事件")
+  url        String            @map("回调地址")
+  secret     String?           @map("签名密钥")
+  enabled    Boolean           @default(true) @map("是否启用")
+  apiKey     ApiKey            @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+  createdAt  DateTime          @default(now()) @map("创建时间")
+
+  @@index([tenantId, event])
+  @@map("Webhook订阅")
+}
+
+model WebhookDelivery {
+  id             String              @id @default(uuid()) @map("投递编号")
+  subscriptionId String              @map("订阅编号")
+  event          String              @map("事件")
+  payload        Json?               @map("投递内容")
+  status         String              @default("待投递") @map("投递状态")
+  httpCode       Int?                @map("HTTP状态码")
+  attempts       Int                 @default(0) @map("尝试次数")
+  nextRetryAt    DateTime?           @map("下次重试时间")
+  subscription   WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  createdAt      DateTime            @default(now()) @map("创建时间")
+
+  @@index([subscriptionId, status])
+  @@map("Webhook投递")
+}
+
+model AuditLog {
+  id         String     @id @default(uuid()) @map("日志编号")
+  tenantId   String     @map("租户编号")
+  actorId    String?    @map("操作人编号")
+  actorType  AuditActor @default(USER) @map("操作人类型")
+  action     String     @map("操作动作")
+  objectType String?    @map("对象类型")
+  objectId   String?    @map("对象编号")
+  before     Json?      @map("变更前")
+  after      Json?      @map("变更后")
+  ip         String?    @map("IP地址")
+  ua         String?    @map("用户代理")
+  at         DateTime   @default(now()) @map("操作时间")
+
+  @@index([tenantId, at])
+  @@index([objectType, objectId])
+  @@map("审计日志")
+}
+
+model Notification {
+  id          String   @id @default(uuid()) @map("通知编号")
+  tenantId    String   @map("租户编号")
+  userId      String   @map("接收人编号")
+  type        String   @map("通知类型")
+  title       String   @map("标题")
+  content     String?  @map("内容")
+  relatedType String?  @map("关联类型")
+  relatedId   String?  @map("关联编号")
+  isRead      Boolean  @default(false) @map("是否已读")
+  at          DateTime @default(now()) @map("产生时间")
+
+  @@index([userId, isRead])
+  @@map("站内通知")
+}
+
+model Dict {
+  id        String     @id @default(uuid()) @map("字典编号")
+  tenantId  String     @map("租户编号")
+  code      String     @map("字典编码")
+  name      String     @map("字典名称")
+  items     DictItem[]
+  createdAt DateTime   @default(now()) @map("创建时间")
+
+  @@unique([tenantId, code])
+  @@map("数据字典")
+}
+
+model DictItem {
+  id      String  @id @default(uuid()) @map("字典项编号")
+  dictId  String  @map("字典编号")
+  label   String  @map("显示名")
+  value   String  @map("取值")
+  sort    Int     @default(0) @map("排序")
+  enabled Boolean @default(true) @map("是否启用")
+  dict    Dict    @relation(fields: [dictId], references: [id], onDelete: Cascade)
+
+  @@index([dictId])
+  @@map("字典项")
+}
