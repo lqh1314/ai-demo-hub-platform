@@ -1,13 +1,23 @@
-import { useState } from 'react';
-import { Card, Tabs, Table, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Popconfirm } from 'antd';
-import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
+import { useEffect, useState } from 'react';
+import { Card, Tabs, Table, Button, Space, Modal, Form, Input, Select, Switch, Tag, message, Alert } from 'antd';
+import { PlusOutlined, EyeOutlined, ApiOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { http, api } from '../../api/client';
 import { usePaged } from '../../lib/hooks';
-import { lbl, fmtTime } from '../../lib/enums';
+import { fmtTime } from '../../lib/enums';
 import ETag from '../../components/ETag';
 
-const PROVIDER_TYPES = ['TELEPHONY', 'ASR', 'TTS', 'LLM', 'SMS', 'EMAIL', 'WECHAT'];
+// OpenAI 兼容大模型预设（填好标识与 Key 即可，baseUrl/模型留空走预设）
+const LLM_PRESETS = [
+  { value: 'deepseek', label: 'DeepSeek（deepseek-chat，国内直连推荐）' },
+  { value: 'doubao', label: '豆包 / 火山方舟 Ark（模型填推理接入点 ep-xxxx）' },
+  { value: 'qwen', label: '通义千问 DashScope（qwen-plus）' },
+  { value: 'zhipu', label: '智谱 GLM（glm-4-flash）' },
+  { value: 'kimi', label: 'Kimi / Moonshot' },
+  { value: 'openai', label: 'OpenAI（gpt-4o-mini，需可访问）' },
+  { value: 'local', label: '本地模型（Ollama/vLLM，无需 Key）' },
+  { value: 'custom', label: '自定义 OpenAI 兼容接口' },
+];
 
 function ApiKeys() {
   const qc = useQueryClient();
@@ -74,40 +84,84 @@ function Providers() {
   const qc = useQueryClient();
   const { rows } = usePaged(['int-providers'], '/integrations/providers', { pageSize: 100 });
   const [open, setOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [active, setActive] = useState<any>(null);
   const [form] = Form.useForm();
-  const create = async () => {
+  const code = Form.useWatch('code', form);
+
+  const refreshActive = async () => setActive(await api<any>(http.get('/integrations/providers/active')));
+  useEffect(() => { refreshActive(); }, [rows.length]);
+
+  const buildCreds = (v: any) => ({
+    apiKey: v.apiKey?.trim() || undefined,
+    baseUrl: v.baseUrl?.trim() || undefined,
+    model: v.model?.trim() || undefined,
+    persona: v.persona?.trim() || undefined,
+  });
+  const save = async () => {
     const v = await form.validateFields();
-    const credentials = { ...(v.credentialsJson ? JSON.parse(v.credentialsJson) : {}) };
-    await api(http.post('/integrations/providers', { ...v, credentials }));
-    message.success('供应商已保存（凭证 AES-GCM 加密存储）'); setOpen(false); form.resetFields(); qc.invalidateQueries({ queryKey: ['int-providers'] });
+    await api(http.post('/integrations/providers', {
+      type: 'LLM', code: v.code, name: v.name || `大模型-${v.code}`, enabled: v.enabled ?? true, priority: 100,
+      credentials: buildCreds(v),
+    }));
+    message.success('已保存并即时生效（凭证 AES-GCM 加密存储）');
+    setOpen(false); form.resetFields();
+    qc.invalidateQueries({ queryKey: ['int-providers'] }); refreshActive();
+  };
+  const testDraft = async () => {
+    const v = await form.validateFields(['code']);
+    setTesting(true);
+    try {
+      const r = await api<any>(http.post('/integrations/providers/test', { code: v.code, credentials: buildCreds(form.getFieldsValue()) }));
+      if (r?.ok) Modal.success({ title: '连接成功', width: 520, content: <div>模型：{r.model}<br />延迟：{r.latencyMs} ms<br />样例回复：{r.sample}</div> });
+      else Modal.error({ title: '连接失败', width: 560, content: r?.error || '未知错误' });
+    } finally { setTesting(false); }
+  };
+  const testSaved = async (r: any) => {
+    const res = await api<any>(http.post('/integrations/providers/test', { id: r.id }));
+    if (res?.ok) message.success(`连接成功，延迟 ${res.latencyMs}ms：${res.sample?.slice(0, 30)}`);
+    else Modal.error({ title: `${r.name} 连接失败`, content: res?.error });
   };
   const reveal = async (r: any) => {
     const data = await api<any>(http.get(`/integrations/providers/${r.id}/reveal`));
     Modal.info({ title: `${r.name} 明文凭证（仅本次展示）`, content: <Input.TextArea readOnly rows={4} value={JSON.stringify(data?.credentials || data, null, 2)} /> });
   };
   return <>
-    <Button type="primary" icon={<PlusOutlined />} style={{ marginBottom: 10 }} onClick={() => setOpen(true)}>接入供应商</Button>
+    <Alert
+      style={{ marginBottom: 10 }}
+      type={active?.real ? 'success' : 'warning'} showIcon
+      message={active?.real
+        ? `当前机器人大脑：真实大模型「${active.activeName}」（${active.activeCode}）；调用失败会自动回退内置沙箱，通话不中断。`
+        : '当前机器人大脑：内置沙箱 NLU（离线可演示）。在下方接入一个 OpenAI 兼容大模型并启用后，接线机器人即切换为真实 AI。'}
+    />
+    <Button type="primary" icon={<PlusOutlined />} style={{ marginBottom: 10 }} onClick={() => setOpen(true)}>接入大模型</Button>
     <Table rowKey="id" size="small" dataSource={rows} pagination={false} columns={[
       { title: '类型', dataIndex: 'type', render: (v) => <ETag value={v} /> },
-      { title: '名称', dataIndex: 'name' }, { title: '供应商标识', dataIndex: 'provider' },
-      { title: '沙箱', dataIndex: 'sandbox', render: (v) => (v ? <Tag color="orange">沙箱</Tag> : <Tag color="green">真实</Tag>) },
-      { title: '启用', dataIndex: 'enabled', render: (v) => (v ? '是' : '否') },
-      { title: '操作', render: (_, r) => <a onClick={() => reveal(r)}><EyeOutlined />查看凭证</a> },
+      { title: '名称', dataIndex: 'name' }, { title: '供应商标识', dataIndex: 'code' },
+      { title: '状态', dataIndex: 'enabled', render: (v) => (v ? <Tag color="green">启用·真实</Tag> : <Tag>未启用</Tag>) },
+      { title: '操作', render: (_, r) => <Space>
+        <a onClick={() => testSaved(r)}><ApiOutlined />测试连接</a>
+        <a onClick={() => reveal(r)}><EyeOutlined />凭证</a>
+      </Space> },
     ]} />
-    <Modal title="接入供应商（语音/大模型/短信，沙箱可离线）" open={open} onOk={create} onCancel={() => setOpen(false)} destroyOnClose width={560}>
-      <Form form={form} layout="vertical" initialValues={{ type: 'LLM', sandbox: true, enabled: true }}>
-        <Space size="large" style={{ display: 'flex' }}>
-          <Form.Item name="type" label="类型" style={{ flex: 1 }}><Select options={PROVIDER_TYPES.map((t) => ({ value: t, label: lbl(t) }))} /></Form.Item>
-          <Form.Item name="provider" label="供应商标识" style={{ flex: 1 }}><Input placeholder="openai / aliyun / ..." /></Form.Item>
-        </Space>
-        <Form.Item name="name" label="配置名称" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="credentialsJson" label="凭证 JSON（appId/apiKey/secret 等，加密存储）">
-          <Input.TextArea rows={3} placeholder={'{"apiKey":"sk-xxx","baseUrl":"https://..."}'} />
+    <Modal title="接入大模型（OpenAI 兼容协议：DeepSeek/豆包/通义/智谱/Kimi/本地）" open={open} onOk={save} confirmLoading={testing}
+      onCancel={() => setOpen(false)} destroyOnClose width={600}
+      footer={(_, { OkBtn, CancelBtn }) => <Space>
+        <Button icon={<ApiOutlined />} loading={testing} onClick={testDraft}>先测试连接</Button>
+        <CancelBtn /><OkBtn />
+      </Space>}>
+      <Form form={form} layout="vertical" initialValues={{ type: 'LLM', code: 'deepseek', enabled: true }}>
+        <Form.Item name="code" label="选择大模型" rules={[{ required: true }]}><Select options={LLM_PRESETS} showSearch optionFilterProp="label" /></Form.Item>
+        <Form.Item name="name" label="配置名称（可选，默认按模型生成）"><Input placeholder="如：售前接线-DeepSeek" /></Form.Item>
+        <Form.Item name="apiKey" label="API Key（本地模型可留空）" rules={[{ required: code !== 'local' && code !== 'custom' ? false : false }]}>
+          <Input.Password autoComplete="new-password" placeholder="sk-xxxxxxxx，加密存储、不明文回显" />
         </Form.Item>
-        <Space size="large">
-          <Form.Item name="sandbox" label="沙箱模式" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
+        <Space size="large" style={{ display: 'flex' }}>
+          <Form.Item name="model" label="模型/接入点（留空用预设）" style={{ flex: 1 }}><Input placeholder={code === 'doubao' ? 'ep-xxxxxxxx' : 'deepseek-chat'} /></Form.Item>
+          <Form.Item name="baseUrl" label="BaseUrl（留空用预设）" style={{ flex: 1 }}><Input placeholder="https://..." /></Form.Item>
         </Space>
+        <Form.Item name="persona" label="机器人业务人设（可选，让回答更贴合你的产品）"><Input.TextArea rows={2} placeholder="如：我们是面向中小企业的智能客服 SaaS，主打通话机器人+电销工作台……" /></Form.Item>
+        <Form.Item name="enabled" label="保存后立即启用为机器人大脑" valuePropName="checked"><Switch /></Form.Item>
       </Form>
     </Modal>
   </>;

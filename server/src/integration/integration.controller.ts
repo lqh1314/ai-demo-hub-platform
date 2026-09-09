@@ -12,5 +12,7 @@ export class IntegrationController {
   @Get('webhooks/deliveries') deliveries() { return this.svc.listDeliveries(); }
   @Get('providers') providers() { return this.svc.listProviders(); }
   @Post('providers') upsertProvider(@Body() b: any) { return this.svc.upsertProvider(b); }
+  @Get('providers/active') activeLlm() { return this.svc.activeLlm(); }
+  @Post('providers/test') testProvider(@Body() b: any) { return this.svc.testProvider(b); }
   @Get('providers/:id/reveal') reveal(@Param('id') id: string) { return this.svc.revealProvider(id); }
 }
