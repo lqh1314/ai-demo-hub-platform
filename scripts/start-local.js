@@ -100,16 +100,16 @@ async function main() {
     log('数据库', '启动内置 PostgreSQL（首次会初始化数据目录，约 10-30 秒）...');
     const EP = require('embedded-postgres').default || require('embedded-postgres');
     pg = new EP({
-      version: 16,
-      host: '127.0.0.1',
+      databaseDir: path.join(ROOT, '.local-pgdata'),
       port: PG_PORT,
       user: 'aihub',
       password: 'aihub_dev_2026',
-      dataDir: path.join(ROOT, '.local-pgdata'),
+      authMethod: 'password',
+      persistent: true,
     });
     await pg.initialise();
     await pg.start();
-    await pg.database.create(DB_NAME).catch((e) => {
+    await pg.createDatabase(DB_NAME).catch((e) => {
       if (!/already exists|42P04/i.test(String(e && e.message))) throw e;
     });
     databaseUrl = DB_URL;
