@@ -14,6 +14,8 @@
     "prisma:seed": "npm run prisma:seed --workspace server",
     "dev:server": "npm run start:dev --workspace server",
     "dev:web": "npm run dev --workspace web",
+    "local:install": "npm install --ignore-scripts --no-audit --no-fund && npm run prisma:generate",
+    "local": "node scripts/start-local.js",
     "build": "npm run build --workspace server && npm run build --workspace web",
     "test": "npm run test --workspace server",
     "typecheck": "npm run typecheck --workspace server && npm run typecheck --workspace web",
