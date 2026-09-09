@@ -58,7 +58,10 @@ function Dispatch() {
       { title: '通道', dataIndex: 'channel', render: (v) => <ETag value={v} /> },
       { title: '状态', dataIndex: 'status', render: (v) => <Tag color={colorOf(v)}>{v}</Tag> },
       { title: '计划时间', dataIndex: 'scheduledAt', render: fmtTime },
-      { title: '统计', render: (_, r) => JSON.stringify(r.stats || {}) },
+      { title: '统计', render: (_, r) => {
+        const items = Object.entries(r.stats || {}).filter(([, v]) => v != null);
+        return items.length ? items.map(([k, v]) => `${k} ${v}`).join(' · ') : '-';
+      } },
     ]} />
     <h4>发送记录</h4>
     <Table rowKey="id" size="small" dataSource={records} pagination={{ pageSize: 8 }} columns={[

@@ -42,7 +42,7 @@ function Rules() {
   </>;
 }
 
-function scoreColor(s: number) { return s >= 90 ? '#52c41a' : s >= 75 ? '#1677ff' : s >= 60 ? '#faad14' : '#ff4d4f'; }
+function scoreColor(s: number) { return s >= 90 ? '#3DDC97' : s >= 75 ? '#5AB2FF' : s >= 60 ? '#FFC261' : '#FF7A90'; }
 
 function Records() {
   const qc = useQueryClient();
@@ -61,7 +61,7 @@ function Records() {
     <Table rowKey="id" size="small" loading={isFetching} dataSource={rows}
       onRow={(r) => ({ onClick: () => setDetail(r), style: { cursor: 'pointer' } })}
       columns={[
-        { title: '通话', render: (_, r) => r.call?.phoneE164 || r.callId?.slice(0, 8) },
+        { title: '通话', render: (_, r) => r.call?.phoneE164 || <span className="mono weak">#{(r.callId || '').slice(-6)}</span> },
         { title: '类型', dataIndex: 'type', render: (v) => lbl(v) },
         { title: '状态', dataIndex: 'status', render: (v) => <ETag value={v} /> },
         { title: '得分', dataIndex: 'score', render: (v) => <span style={{ color: scoreColor(v), fontWeight: 700 }}>{v}</span> },

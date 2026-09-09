@@ -36,6 +36,8 @@ export const ENUM_LABEL: Record<string, string> = {
   // 供应商
   TELEPHONY: '语音线路', ASR: '语音识别', TTS: '语音合成', LLM: '大模型',
   ACTIVE: '启用', DISABLED: '停用',
+  // 知识库 / 通用发布态
+  PUBLISHED: '已发布', ARCHIVED: '已归档',
 };
 
 export const lbl = (v?: string | null) => (v == null || v === '' ? '-' : ENUM_LABEL[v] || v);
@@ -52,7 +54,10 @@ export const ENUM_COLOR: Record<string, string> = {
 };
 export const colorOf = (v?: string | null) => (v ? ENUM_COLOR[v] || 'default' : 'default');
 
-export const fmtTime = (t?: string | Date | null, f = 'YYYY-MM-DD HH:mm:ss') => (t ? dayjs(t).format(f) : '-');
+// 注意：这些函数常直接作为 antd Table 的 column.render 传入，render 第二/三参数是 record/index，
+// 因此格式串参数必须校验为字符串，避免把行对象误当成 dayjs format 模板导致整树渲染崩溃。
+export const fmtTime = (t?: string | Date | null, f?: unknown) =>
+  (t ? dayjs(t).format(typeof f === 'string' ? f : 'YYYY-MM-DD HH:mm:ss') : '-');
 export const fmtDate = (t?: string | Date | null) => (t ? dayjs(t).format('YYYY-MM-DD') : '-');
 export const fmtMoney = (n?: number | string | null) =>
   n == null || n === '' ? '-' : `¥${Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

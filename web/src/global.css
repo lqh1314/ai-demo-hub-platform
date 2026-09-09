@@ -1,17 +1,188 @@
+/* ============================================================
+   AI Demo Hub · Dark Mission-Control 暗色作战室全局样式
+   令牌：信号青 #46E6C8 × 电蓝 #5AB2FF；禁紫粉渐变/纯黑
+   ============================================================ */
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #f2f4f8; color: #1f2329; }
-.page-card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.04); }
-.page-title { font-size: 16px; font-weight: 700; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
-.muted { color: #97a0af; }
-.stat-num { font-size: 26px; font-weight: 700; line-height: 1.2; }
-.chat-bubble { max-width: 78%; padding: 8px 12px; border-radius: 10px; margin: 6px 0; white-space: pre-wrap; word-break: break-word; }
-.chat-bot { background: #eef3ff; align-self: flex-start; border-bottom-left-radius: 2px; }
-.chat-customer { background: #e8f7ee; align-self: flex-end; border-bottom-right-radius: 2px; }
-.chat-agent { background: #fff4e6; align-self: flex-start; border-bottom-left-radius: 2px; }
+
+:root {
+  --bg: #080B11;
+  --bg-2: #0C111B;
+  --surface: #10151F;
+  --surface-2: #141B28;
+  --line: rgba(148, 160, 184, .14);
+  --primary: #46E6C8;
+  --blue: #5AB2FF;
+  --text: #E9EEF7;
+  --text-sub: #9AA6BD;
+  --text-weak: #6B7689;
+  --success: #3DDC97;
+  --warning: #FFC261;
+  --danger: #FF7A90;
+}
+
+body {
+  font-family: Inter, 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1100px 620px at 88% -12%, rgba(90, 178, 255, .10), transparent 60%),
+    radial-gradient(900px 560px at -8% 8%, rgba(70, 230, 200, .08), transparent 58%),
+    linear-gradient(rgba(148, 160, 184, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 160, 184, .045) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 玻璃面板：1px 渐变描边 + 内高光，hover 微浮起 */
+.page-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(20, 27, 40, .82), rgba(16, 21, 31, .86));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04), 0 10px 30px -18px rgba(0, 0, 0, .8);
+  backdrop-filter: blur(8px);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.page-card.hoverable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(70, 230, 200, .34);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 18px 40px -20px rgba(70, 230, 200, .28);
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  margin: 0 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+}
+.page-title::before {
+  content: '';
+  width: 3px;
+  height: 15px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--primary), var(--blue));
+  box-shadow: 0 0 10px -1px rgba(70, 230, 200, .7);
+}
+
+.muted { color: var(--text-sub); }
+.weak { color: var(--text-weak); }
+.mono { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+/* 数字 / 品牌渐变字 */
+.stat-num { font-size: 26px; font-weight: 700; line-height: 1.2; font-family: 'Space Grotesk', 'JetBrains Mono', Inter, sans-serif; letter-spacing: .01em; }
+.stat-num.brand, .brand-text {
+  background: linear-gradient(120deg, var(--primary), var(--blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 实时脉冲点 */
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 0 rgba(70, 230, 200, .55); animation: livePulse 1.8s infinite; }
+.live-dot.blue { background: var(--blue); box-shadow: 0 0 0 0 rgba(90, 178, 255, .55); animation-name: livePulseBlue; }
+.live-dot.warn { background: var(--warning); box-shadow: 0 0 0 0 rgba(255, 194, 97, .5); animation-name: livePulseWarn; }
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(70, 230, 200, .5); }
+  70% { box-shadow: 0 0 0 9px rgba(70, 230, 200, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(70, 230, 200, 0); }
+}
+@keyframes livePulseBlue { 0% { box-shadow: 0 0 0 0 rgba(90,178,255,.5);} 70% { box-shadow: 0 0 0 9px rgba(90,178,255,0);} 100% { box-shadow: 0 0 0 0 rgba(90,178,255,0);} }
+@keyframes livePulseWarn { 0% { box-shadow: 0 0 0 0 rgba(255,194,97,.5);} 70% { box-shadow: 0 0 0 9px rgba(255,194,97,0);} 100% { box-shadow: 0 0 0 0 rgba(255,194,97,0);} }
+
+/* 聊天气泡（暗色） */
 .chat-col { display: flex; flex-direction: column; }
 .scroll-y { overflow-y: auto; }
+.chat-bubble { max-width: 78%; padding: 9px 13px; border-radius: 12px; margin: 6px 0; white-space: pre-wrap; word-break: break-word; line-height: 1.6; font-size: 13.5px; }
+.chat-bot { background: linear-gradient(135deg, rgba(70, 230, 200, .14), rgba(90, 178, 255, .10)); border: 1px solid rgba(70, 230, 200, .22); color: var(--text); align-self: flex-start; border-bottom-left-radius: 3px; }
+.chat-customer { background: rgba(90, 178, 255, .16); border: 1px solid rgba(90, 178, 255, .26); color: var(--text); align-self: flex-end; border-bottom-right-radius: 3px; }
+.chat-agent { background: rgba(255, 194, 97, .12); border: 1px solid rgba(255, 194, 97, .24); color: var(--text); align-self: flex-start; border-bottom-left-radius: 3px; }
+
+/* ============ 登录页 ============ */
+.login-shell {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 20px;
+  background: radial-gradient(1200px 700px at 50% -20%, rgba(90, 178, 255, .12), transparent 60%), var(--bg);
+}
+.login-orb { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+.login-card {
+  position: relative;
+  width: 400px;
+  max-width: 100%;
+  padding: 30px 28px 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(20, 27, 40, .9), rgba(12, 17, 27, .94));
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 40px 90px -40px rgba(0, 0, 0, .9), 0 0 0 1px rgba(70, 230, 200, .05);
+  backdrop-filter: blur(14px);
+}
+.login-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: .18em;
+  color: var(--primary);
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(70, 230, 200, .3);
+  background: rgba(70, 230, 200, .08);
+}
+.login-icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: #06231e;
+  background: linear-gradient(135deg, var(--primary), var(--blue));
+  box-shadow: 0 0 28px -6px rgba(70, 230, 200, .75);
+}
+
+/* ============ AntD 暗色细节覆写 ============ */
+.ant-card { background-image: linear-gradient(180deg, rgba(255,255,255,.02), transparent 40%); }
+.ant-card-head { border-bottom-color: var(--line) !important; }
+.ant-table-thead > tr > th { font-weight: 600 !important; letter-spacing: .02em; }
+.ant-table-tbody > tr > td { border-bottom-color: rgba(148, 160, 184, .08) !important; }
+.ant-modal-content, .ant-drawer-content { border: 1px solid var(--line); }
+.ant-btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--blue));
+  color: #06231e;
+  font-weight: 600;
+  border: none;
+}
+.ant-btn-primary:hover, .ant-btn-primary:focus {
+  background: linear-gradient(135deg, #62edd4, #74c1ff) !important;
+  color: #06231e !important;
+}
+.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn { font-weight: 600; }
+.ant-tag { border: none; }
+.ant-statistic-content { font-family: 'Space Grotesk', 'JetBrains Mono', Inter, sans-serif; }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: rgba(148, 160, 184, .22); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 160, 184, .38); background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
 @media (max-width: 768px) {
   .stat-num { font-size: 22px; }
   .ant-table { font-size: 12px; }
+  .login-card { padding: 24px 18px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }

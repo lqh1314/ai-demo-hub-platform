@@ -85,7 +85,7 @@ export default function LiveCall() {
               <Button size="small" icon={<LoginOutlined />} onClick={transfer}>转人工</Button>
               <Button size="small" danger icon={<PauseOutlined />} onClick={end}>结束并生成小结</Button>
             </Space>}>
-            <div className="chat-col scroll-y" style={{ height: 340, background: '#fafbfc', borderRadius: 8, padding: 10 }}>
+            <div className="chat-col scroll-y" style={{ height: 340, background: 'rgba(255,255,255,.025)', borderRadius: 8, padding: 10 }}>
               {segments.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无对话，使用下方输入模拟说话" />}
               {segments.map((s, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: s.speaker === 'CUSTOMER' ? 'flex-end' : 'flex-start' }}>

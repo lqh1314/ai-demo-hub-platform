@@ -13,26 +13,35 @@ export default function Reports() {
   const calls = useOnce<any>(['r-calls', range], '/reports/calls', range);
   const agents = useOnce<any>(['r-agents', range], '/reports/agents', range);
 
+  // 暗色作战室图表令牌
+  const PALETTE = ['#46E6C8', '#5AB2FF', '#3DDC97', '#FFC261', '#FF7A90', '#7AA7FF', '#59D6E8', '#B8C4DA'];
+  const TT = { backgroundColor: 'rgba(22,29,43,.96)', borderColor: 'rgba(148,160,184,.2)', textStyle: { color: '#E9EEF7' } };
+  const axisCat = { axisLine: { lineStyle: { color: 'rgba(148,160,184,.3)' } }, axisTick: { show: false }, axisLabel: { color: '#9AA6BD' } };
+  const axisVal = { axisLabel: { color: '#9AA6BD' }, splitLine: { lineStyle: { color: 'rgba(148,160,184,.10)' } } };
   const leadFunnel = {
-    tooltip: {}, series: [{ type: 'funnel', left: 20, right: 20, top: 20, bottom: 20,
+    color: PALETTE, tooltip: TT, series: [{ type: 'funnel', left: 20, right: 20, top: 20, bottom: 20, label: { color: '#E9EEF7' },
       data: (fn.data?.leadFunnel || []).map((x: any) => ({ name: lbl(x.stage), value: x.count })) }],
   };
   const oppFunnel = {
-    tooltip: {}, series: [{ type: 'funnel', left: 20, right: 20, top: 20, bottom: 20,
+    color: PALETTE, tooltip: TT, series: [{ type: 'funnel', left: 20, right: 20, top: 20, bottom: 20, label: { color: '#E9EEF7' },
       data: (fn.data?.oppFunnel || []).map((x: any) => ({ name: lbl(x.stage), value: x.count })) }],
   };
   const callPie = {
-    tooltip: { trigger: 'item' }, legend: { bottom: 0 },
-    series: [{ type: 'pie', radius: ['40%', '68%'], data: (calls.data?.byDisposition || []).map((x: any) => ({ name: x.k === '未标记' ? '未标记' : lbl(x.k), value: x.v })) }],
+    color: PALETTE, tooltip: { ...TT, trigger: 'item' }, legend: { bottom: 0, textStyle: { color: '#9AA6BD' } },
+    series: [{ type: 'pie', radius: ['40%', '68%'], itemStyle: { borderColor: '#0C111B', borderWidth: 2 }, label: { color: '#9AA6BD' },
+      data: (calls.data?.byDisposition || []).map((x: any) => ({ name: x.k === '未标记' ? '未标记' : lbl(x.k), value: x.v })) }],
   };
   const dirBar = {
-    tooltip: {}, xAxis: { type: 'category', data: (calls.data?.byDirection || []).map((x: any) => lbl(x.k)) },
-    yAxis: { type: 'value' }, series: [{ type: 'bar', data: (calls.data?.byDirection || []).map((x: any) => x.v), itemStyle: { color: '#2f6bff' } }],
+    tooltip: TT, xAxis: { type: 'category', ...axisCat, data: (calls.data?.byDirection || []).map((x: any) => lbl(x.k)) },
+    yAxis: { type: 'value', ...axisVal }, series: [{ type: 'bar', barWidth: 46,
+      itemStyle: { borderRadius: [6, 6, 0, 0], color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: '#46E6C8' }, { offset: 1, color: '#5AB2FF' }] } },
+      data: (calls.data?.byDirection || []).map((x: any) => x.v) }],
   };
   const agentBar = {
-    tooltip: {}, grid: { left: 80 }, xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: (agents.data || []).map((x: any) => x.agentName) },
-    series: [{ type: 'bar', data: (agents.data || []).map((x: any) => x.calls), itemStyle: { color: '#36cbcb' } }],
+    tooltip: TT, grid: { left: 80 }, xAxis: { type: 'value', ...axisVal },
+    yAxis: { type: 'category', ...axisCat, data: (agents.data || []).map((x: any) => x.agentName) },
+    series: [{ type: 'bar', barWidth: 16, itemStyle: { borderRadius: [0, 8, 8, 0], color: '#46E6C8' },
+      data: (agents.data || []).map((x: any) => x.calls) }],
   };
 
   return (

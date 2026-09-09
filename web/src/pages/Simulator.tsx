@@ -23,7 +23,7 @@ export default function Simulator() {
   const inbound = async () => {
     setBusy(true); setMsgs([]);
     try {
-      const { data } = await axios.post(`${BASE}/cti/inbound`, { from });
+      const { data } = await axios.get(`${BASE}/cti/demo-inbound`, { params: { phone: from } });
       setCallId(data.call.id);
       push({ who: 'sys', text: `来电接入：${from} → 机器人接听（通话号 ${data.call.id.slice(0, 8)}…）` });
       push({ who: 'bot', text: data.welcome });
@@ -38,7 +38,7 @@ export default function Simulator() {
     push({ who: 'customer', text: content });
     setText('');
     try {
-      const { data } = await axios.post(`${BASE}/cti/utter`, { callId, text: content });
+      const { data } = await axios.post(`${BASE}/cti/demo-utter`, { callId, text: content });
       push({ who: 'bot', text: data.reply });
       if (data.action && data.action !== 'ANSWER') push({ who: 'sys', text: `机器人动作：${data.action}${data.leadId ? '（已自动留资建档）' : ''}${data.routed?.assigned ? '，已派单给坐席' : ''}` });
       scroll();
@@ -47,7 +47,7 @@ export default function Simulator() {
 
   const end = async () => {
     if (!callId) return;
-    await axios.post(`${BASE}/cti/end`, { callId, disposition: 'INTENT' });
+    await axios.post(`${BASE}/cti/demo-end`, { callId, disposition: 'INTENT' });
     push({ who: 'sys', text: '客户挂断，系统生成 AI 小结、写跟进动态并释放坐席。' });
     setCallId(''); scroll();
   };
@@ -63,7 +63,7 @@ export default function Simulator() {
               : <Button size="small" danger onClick={end}>挂断结束</Button>}
           </Space>
         }>
-          <div className="chat-col scroll-y" style={{ height: 420, background: '#fafbfc', borderRadius: 8, padding: 12 }}>
+          <div className="chat-col scroll-y" style={{ height: 420, background: 'rgba(255,255,255,.025)', borderRadius: 8, padding: 12 }}>
             {msgs.length === 0 && <Alert type="info" showIcon message="点击「模拟来电」发起一通呼入，再用快捷语句或自由输入与机器人多轮对话，观察意向识别、自动留资与转人工派单。" />}
             {msgs.map((m, i) => m.who === 'sys' ? (
               <div key={i} style={{ textAlign: 'center', margin: '6px 0' }}><Tag color="blue">{m.text}</Tag></div>

@@ -64,7 +64,7 @@ export class DialogOrchestrator {
       await this.prisma.callSession.update({ where: { id: call.id }, data: { leadId } });
     }
     const action = (chat.action || 'ANSWER') as TurnResult['action'];
-    const outcome = action === 'TRANSFER' ? 'TRANSFER' : action === 'COLLECT_LEAD' ? 'LEFT_INFO' : conv.outcome;
+    const outcome = action === 'TRANSFER' ? 'TO_HUMAN' : action === 'COLLECT_LEAD' ? 'LEFT_INFO' : conv.outcome;
     await this.prisma.botSession.update({
       where: { callId: call.id },
       data: { turnCount: { increment: 1 }, recognizedIntent: chat.intentCode, slots, outcome: outcome as any, summary: chat.intentName },

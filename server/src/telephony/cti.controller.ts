@@ -32,6 +32,13 @@ export class CtiController {
     }
   }
 
+  /** 演示沙箱开关：非生产默认放行；生产必须显式 ALLOW_DEMO_INBOUND=true */
+  private assertDemo() {
+    if (this.isProd && process.env.ALLOW_DEMO_INBOUND !== 'true') {
+      throw new ForbiddenException('演示入口在生产环境已关闭');
+    }
+  }
+
   @Public() @Post('inbound') inbound(@Req() req: Request, @Body() b: any) {
     this.assertCti(req);
     return this.calls.inboundCall(this.tenant(b.tenantId), { from: b.from, to: b.to, lineId: b.lineId, groupId: b.groupId });
@@ -45,12 +52,20 @@ export class CtiController {
     return this.calls.endCall(this.tenant(b.tenantId), b.callId, 'CALLER', b.disposition);
   }
 
-  /** 工作台“模拟来电”一键入口：生产默认关闭，避免被当作伪造呼入口 */
-  @Public() @Get('demo-inbound') demo(@Req() req: Request, @Query('phone') phone: string, @Query('group') group?: string) {
-    if (this.isProd && process.env.ALLOW_DEMO_INBOUND !== 'true') {
-      throw new ForbiddenException('演示入口在生产环境已关闭');
-    }
-    this.assertCti(req);
+  /**
+   * 工作台内置沙箱（呼入模拟器）专用入口：只受 ALLOW_DEMO_INBOUND 开关控制，
+   * 不要求运营商回调密钥（密钥不能下发到浏览器）；与上方生产回调入口严格分离。
+   */
+  @Public() @Get('demo-inbound') demo(@Query('phone') phone: string, @Query('group') group?: string) {
+    this.assertDemo();
     return this.calls.inboundCall(DEFAULT_TENANT_ID, { from: phone || '13800138000', groupId: group });
+  }
+  @Public() @Post('demo-utter') demoUtter(@Body() b: any) {
+    this.assertDemo();
+    return this.calls.customerSay(DEFAULT_TENANT_ID, b.callId, b.text);
+  }
+  @Public() @Post('demo-end') demoEnd(@Body() b: any) {
+    this.assertDemo();
+    return this.calls.endCall(DEFAULT_TENANT_ID, b.callId, 'CALLER', b.disposition);
   }
 }

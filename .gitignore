@@ -42,3 +42,6 @@ test-results/
 # 临时
 tmp/
 .cache/
+
+# 本机运行时（便携 PG/日志/截图）
+.run/
