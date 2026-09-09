@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Row, Col, Card, Button, Input, Select, Space, Tag, List, Descriptions, Empty, Divider, message, Timeline } from 'antd';
+import { Row, Col, Card, Button, Input, Select, Space, Tag, List, Descriptions, Empty, Divider, Alert, message, Timeline } from 'antd';
 import { PhoneFilled, PauseOutlined, LoginOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { http, api } from '../api/client';
@@ -17,6 +17,7 @@ export default function LiveCall() {
   const [say, setSay] = useState('');
   const [to, setTo] = useState('13911112222');
   const [ai, setAi] = useState<any>(null);
+  const [ending, setEnding] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const active = usePaged(['calls-active'], '/calls', { pageSize: 50 }, {});
@@ -56,12 +57,27 @@ export default function LiveCall() {
     setSegments((s) => [...s, { speaker, text: say }]);
     setSay('');
   };
-  const transfer = async () => { await api(http.post(`/calls/${callId}/transfer`)); message.success('已请求转人工派单'); };
+  const transfer = async () => {
+    if (!callId || ended) return;
+    try {
+      await api(http.post(`/calls/${callId}/transfer`));
+      message.success('已请求转人工派单'); call.refetch();
+    } catch { message.error('转人工失败，请重试'); }
+  };
   const end = async () => {
-    const r = await api<any>(http.post(`/calls/${callId}/end`, { disposition: 'INTENT' }));
-    setAi(r.aiSummary); message.success('通话结束，AI 小结已生成'); call.refetch();
+    if (!callId || ending || ended) return;
+    setEnding(true);
+    try {
+      const r = await api<any>(http.post(`/calls/${callId}/end`, { disposition: 'INTENT' }));
+      if (r?.aiSummary) setAi(r.aiSummary);
+      message.success('通话结束，AI 小结已生成');
+      await Promise.all([call.refetch(), active.refetch?.()]);
+    } catch {
+      message.error('结束失败，请重试');
+    } finally { setEnding(false); }
   };
 
+  const ended = ['ENDED', 'MISSED', 'FAILED'].includes(call.data?.status);
   const ongoing = active.rows.filter((c: any) => !['ENDED', 'MISSED', 'FAILED'].includes(c.status));
 
   return (
@@ -82,9 +98,15 @@ export default function LiveCall() {
           <Card size="small" style={{ marginTop: 12 }}
             title={<Space>实时转写 {call.data && <Tag color={colorOf(call.data.status)}>{lbl(call.data.status)}</Tag>}</Space>}
             extra={<Space>
-              <Button size="small" icon={<LoginOutlined />} onClick={transfer}>转人工</Button>
-              <Button size="small" danger icon={<PauseOutlined />} onClick={end}>结束并生成小结</Button>
+              <Button size="small" icon={<LoginOutlined />} disabled={ended} onClick={transfer}>转人工</Button>
+              <Button size="small" danger icon={<PauseOutlined />} loading={ending} disabled={ended} onClick={end}>
+                {ended ? '已结束' : '结束并生成小结'}
+              </Button>
             </Space>}>
+            {ended && (
+              <Alert style={{ marginBottom: 8 }} type="success" showIcon
+                message="本通通话已结束，AI 小结与跟进动态已生成（见下方）。可在上方下拉选择或发起下一通。" />
+            )}
             <div className="chat-col scroll-y" style={{ height: 340, background: 'rgba(255,255,255,.025)', borderRadius: 8, padding: 10 }}>
               {segments.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无对话，使用下方输入模拟说话" />}
               {segments.map((s, i) => (
@@ -96,10 +118,10 @@ export default function LiveCall() {
               <div ref={bottomRef} />
             </div>
             <Space.Compact style={{ width: '100%', marginTop: 10 }}>
-              <Input value={say} placeholder="输入话术（沙箱模拟语音识别文本）" onChange={(e) => setSay(e.target.value)}
+              <Input value={say} disabled={ended} placeholder="输入话术（沙箱模拟语音识别文本）" onChange={(e) => setSay(e.target.value)}
                 onPressEnter={() => utter('AGENT')} />
-              <Button onClick={() => utter('CUSTOMER')}>模拟客户说</Button>
-              <Button type="primary" onClick={() => utter('AGENT')}>坐席说</Button>
+              <Button disabled={ended} onClick={() => utter('CUSTOMER')}>模拟客户说</Button>
+              <Button disabled={ended} type="primary" onClick={() => utter('AGENT')}>坐席说</Button>
             </Space.Compact>
           </Card>
         )}

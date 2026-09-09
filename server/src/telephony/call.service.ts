@@ -93,6 +93,8 @@ export class CallService {
   async endCall(tenantId: string, callId: string, by = 'CALLER', disposition?: string) {
     const call = await this.prisma.callSession.findFirst({ where: { id: callId, tenantId } });
     if (!call) throw BizException.notFound('通话不存在');
+    // 幂等：已结束的通话直接返回当前记录，避免重复生成小结与跟进动态
+    if (call.status === 'ENDED') return call;
     const now = new Date();
     const start = call.answerAt || call.queueEnterAt || call.createdAt;
     const duration = Math.max(0, Math.round((now.getTime() - start.getTime()) / 1000));
