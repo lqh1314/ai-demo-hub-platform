@@ -14,13 +14,14 @@ export class CrmService {
   // ---------------- 线索 ----------------
   async listLeads(q: any) {
     const { skip, take, page, pageSize } = parsePage(q);
+    const kw = q.kw ?? q.keyword;
     const where: any = { tenantId: this.t(), deletedAt: null };
     if (q.stage) where.stage = q.stage;
     if (q.intentLevel) where.intentLevel = q.intentLevel;
     if (q.source) where.source = q.source;
     if (q.mine === '1') where.ownerId = this.me().userId;
     if (q.ownerId) where.ownerId = q.ownerId;
-    if (q.kw) where.OR = [{ name: { contains: q.kw } }, { company: { contains: q.kw } }, { phoneE164: { contains: q.kw } }];
+    if (kw) where.OR = [{ name: { contains: kw } }, { company: { contains: kw } }, { phoneRaw: { contains: kw } }, { phoneE164: { contains: kw } }];
     const [list, total] = await Promise.all([
       this.prisma.lead.findMany({ where, skip, take, orderBy: { updatedAt: 'desc' } }),
       this.prisma.lead.count({ where }),
@@ -35,16 +36,34 @@ export class CrmService {
   }
   async createLead(dto: any) {
     const tenantId = this.t();
+    const phone = dto.phoneRaw ?? dto.phone;
     return this.prisma.lead.create({
       data: {
         tenantId,
         name: dto.name, company: dto.company, email: dto.email,
-        phoneRaw: dto.phone, phoneE164: normalizePhone(dto.phone),
+        phoneRaw: phone, phoneE164: normalizePhone(phone),
         source: (dto.source as any) || 'MANUAL', intentLevel: (dto.intentLevel as any) || 'UNKNOWN',
         intentTags: dto.intentTags || [], ownerId: dto.ownerId || this.me().userId, groupId: dto.groupId,
         rawPayload: dto.raw || undefined, stage: 'NEW',
       },
     });
+  }
+  /** 编辑线索（仅允许业务字段，租户隔离） */
+  async updateLead(id: string, dto: any) {
+    await this.getLead(id);
+    const phone = dto.phoneRaw ?? dto.phone;
+    const data: any = {};
+    for (const k of ['name', 'company', 'email', 'source', 'intentLevel', 'intentTags', 'ownerId', 'groupId', 'stage']) {
+      if (dto[k] !== undefined) data[k] = dto[k];
+    }
+    if (phone !== undefined) { data.phoneRaw = phone; data.phoneE164 = normalizePhone(phone); }
+    return this.prisma.lead.update({ where: { id }, data });
+  }
+  /** 删除线索（软删，列表默认过滤 deletedAt） */
+  async removeLead(id: string) {
+    await this.getLead(id);
+    await this.prisma.lead.update({ where: { id }, data: { deletedAt: new Date() } });
+    return { ok: true };
   }
   async assignLead(id: string, dto: { ownerId?: string; groupId?: string }) {
     await this.getLead(id);
@@ -80,10 +99,11 @@ export class CrmService {
   // ---------------- 客户 / 联系人 ----------------
   async listCustomers(q: any) {
     const { skip, take, page, pageSize } = parsePage(q);
+    const kw = q.kw ?? q.keyword;
     const where: any = { tenantId: this.t(), deletedAt: null };
     if (q.mine === '1') where.ownerId = this.me().userId;
     if (q.level) where.level = q.level;
-    if (q.kw) where.name = { contains: q.kw };
+    if (kw) where.OR = [{ name: { contains: kw } }, { industry: { contains: kw } }];
     const [list, total] = await Promise.all([
       this.prisma.customer.findMany({ where, skip, take, orderBy: { updatedAt: 'desc' }, include: { _count: { select: { contacts: true, opportunities: true } } } }),
       this.prisma.customer.count({ where }),
@@ -136,10 +156,12 @@ export class CrmService {
   // ---------------- 商机 ----------------
   async listOpportunities(q: any) {
     const { skip, take, page, pageSize } = parsePage(q);
+    const kw = q.kw ?? q.keyword;
     const where: any = { tenantId: this.t(), deletedAt: null };
     if (q.stage) where.stage = q.stage;
     if (q.mine === '1') where.ownerId = this.me().userId;
     if (q.customerId) where.customerId = q.customerId;
+    if (kw) where.name = { contains: kw };
     const [list, total] = await Promise.all([
       this.prisma.opportunity.findMany({ where, skip, take, orderBy: { updatedAt: 'desc' }, include: { customer: { select: { name: true } } } }),
       this.prisma.opportunity.count({ where }),

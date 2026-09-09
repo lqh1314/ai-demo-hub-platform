@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { CrmService } from './crm.service';
 
 @Controller()
@@ -9,6 +9,8 @@ export class CrmController {
   @Get('leads') listLeads(@Query() q: any) { return this.svc.listLeads(q); }
   @Get('leads/:id') getLead(@Param('id') id: string) { return this.svc.getLead(id); }
   @Post('leads') createLead(@Body() b: any) { return this.svc.createLead(b); }
+  @Patch('leads/:id') updateLead(@Param('id') id: string, @Body() b: any) { return this.svc.updateLead(id, b); }
+  @Delete('leads/:id') removeLead(@Param('id') id: string) { return this.svc.removeLead(id); }
   @Post('leads/:id/assign') assign(@Param('id') id: string, @Body() b: any) { return this.svc.assignLead(id, b); }
   @Post('leads/:id/convert') convert(@Param('id') id: string, @Body() b: any) { return this.svc.convertLead(id, b); }
 
