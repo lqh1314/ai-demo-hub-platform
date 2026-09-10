@@ -11,6 +11,17 @@ export class QueueService {
   constructor(private prisma: PrismaService, private presence: PresenceService, private bus: RealtimeBus) {}
 
   async enqueue(tenantId: string, data: { callId?: string; leadId?: string; phone?: string | null; groupId: string; strategy: 'ROUND_ROBIN' | 'LEAST_LOAD' | 'SKILL_MATCH'; priority?: number }) {
+    // 同一通话重复请求转人工时幂等：复用既有排队记录重新排队，避免唯一约束(通话编号)冲突导致 500
+    if (data.callId) {
+      const existing = await this.prisma.dispatchQueue.findFirst({ where: { callId: data.callId }, orderBy: { enqueueAt: 'desc' } });
+      if (existing) {
+        const q = await this.prisma.dispatchQueue.update({
+          where: { id: existing.id },
+          data: { state: 'WAITING', assignedTo: null, groupId: data.groupId, leadId: data.leadId ?? existing.leadId, phoneE164: data.phone ?? existing.phoneE164, strategy: data.strategy, priority: data.priority ?? 100, enqueueAt: new Date() },
+        });
+        return this.tryAssign(tenantId, q.id);
+      }
+    }
     const q = await this.prisma.dispatchQueue.create({
       data: { tenantId, groupId: data.groupId, callId: data.callId, leadId: data.leadId, phoneE164: data.phone, strategy: data.strategy, priority: data.priority ?? 100, state: 'WAITING', enqueueAt: new Date() },
     });

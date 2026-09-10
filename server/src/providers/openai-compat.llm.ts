@@ -100,7 +100,9 @@ export class OpenAiCompatLlm implements LlmPort {
     const userText = lastUser?.content || '';
     // 规则兜底：即便模型没按 JSON 输出，也保证转人工与手机号槽位不丢
     const localSlots = extractSlots(userText);
-    const forceTransfer = wantsTransfer(userText);
+    // “你是机器人还是真人/是不是真人”是身份疑问而非转人工请求，不能因句中含“真人”就强制转人工
+    const isIdentityAsk = /(你是|你们是|是不是|还是|是).{0,4}(机器人|真人|人工智能|智能助手|AI)|是人是/.test(userText);
+    const forceTransfer = wantsTransfer(userText) && !isIdentityAsk;
     if (parsed && typeof parsed === 'object' && parsed.reply) {
       const slots = { ...localSlots, ...(parsed.slots || {}) };
       const action = forceTransfer ? 'TRANSFER' : (['ANSWER', 'TRANSFER', 'COLLECT_LEAD', 'SCRIPT'].includes(parsed.action) ? parsed.action : 'ANSWER');

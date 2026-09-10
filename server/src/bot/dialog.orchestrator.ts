@@ -38,9 +38,15 @@ export class DialogOrchestrator {
       this.prisma.intent.findMany({ where: { tenantId, enabled: true } }),
       this.prisma.knowledgeItem.findMany({ where: { tenantId, status: 'PUBLISHED' }, take: 40 }),
     ]);
+    // 先取历史（此时尚未写入本轮客户句），让大模型具备多轮上下文记忆，承接“然后呢/太贵了/行吧”等
+    const priorSegs = await this.prisma.transcriptSegment.findMany({ where: { tenantId, callId: call.id }, orderBy: { seq: 'asc' } });
+    const history = priorSegs
+      .filter((s) => s.speaker === 'CUSTOMER' || s.speaker === 'BOT')
+      .slice(-10)
+      .map((s) => ({ role: (s.speaker === 'CUSTOMER' ? 'user' : 'assistant') as 'user' | 'assistant', content: s.text }));
     await this.appendSegment(tenantId, call.id, baseSeq, 'CUSTOMER', userText);
     const chat = await this.providers.getLlm().chat({
-      messages: [{ role: 'user', content: userText }],
+      messages: [...history, { role: 'user', content: userText }],
       intents: intents.map((i) => ({ code: i.code, name: i.name, keywords: i.keywords })),
       knowledge: kb.map((k) => ({ q: k.question, a: k.answer, keywords: k.keywords })),
     });
