@@ -10,7 +10,8 @@ const PRESET_BASE: Record<string, { baseUrl: string; model: string }> = {
   qwen: { baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
   zhipu: { baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
   kimi: { baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
-  local: { baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen2.5:7b' },
+  'local-demo': { baseUrl: 'http://127.0.0.1:3100/v1', model: 'demo-zh' },
+  ollama: { baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen2.5:7b' },
 };
 
 export interface LlmCreds {

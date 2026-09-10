@@ -19,6 +19,7 @@ const WEB = path.join(ROOT, 'web');
 const PG_PORT = Number(process.env.LOCAL_PG_PORT || 5433);
 const API_PORT = Number(process.env.PORT || 3000);
 const WEB_PORT = Number(process.env.WEB_PORT || 8080);
+const LLM_PORT = Number(process.env.LOCAL_LLM_PORT || 3100);
 const DB_NAME = 'aihub';
 const DB_URL = `postgresql://aihub:aihub_dev_2026@127.0.0.1:${PG_PORT}/${DB_NAME}?schema=public`;
 
@@ -128,6 +129,14 @@ async function main() {
 
   log('种子', '写入/校验演示数据（幂等）...');
   await runNode([path.join(SERVER, 'dist', 'prisma', 'seed.js')], SERVER, { DATABASE_URL: databaseUrl }, '种子');
+
+  // 启动内置离线演示大模型（OpenAI 兼容，免 Key），让机器人开箱即有“真实链路”的自然应答
+  const localLlm = path.join(ROOT, 'runtime', 'local-llm-server.js');
+  if (fs.existsSync(localLlm)) {
+    log('演示大模型', `启动内置离线模型 :${LLM_PORT}（无需外部 Key）...`);
+    spawnService([localLlm], ROOT, { LOCAL_LLM_PORT: String(LLM_PORT) }, '演示大模型');
+    await waitReady(`http://127.0.0.1:${LLM_PORT}/health`, 30000, '内置演示大模型');
+  }
 
   const apiEnv = {
     DATABASE_URL: databaseUrl,

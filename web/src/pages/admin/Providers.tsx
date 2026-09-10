@@ -15,7 +15,8 @@ const LLM_PRESETS = [
   { value: 'zhipu', label: '智谱 GLM（glm-4-flash）' },
   { value: 'kimi', label: 'Kimi / Moonshot' },
   { value: 'openai', label: 'OpenAI（gpt-4o-mini，需可访问）' },
-  { value: 'local', label: '本地模型（Ollama/vLLM，无需 Key）' },
+  { value: 'local-demo', label: '内置离线演示模型（免Key，开箱即用，推荐先体验）' },
+  { value: 'ollama', label: '本地 Ollama / vLLM（自建模型）' },
   { value: 'custom', label: '自定义 OpenAI 兼容接口' },
 ];
 
@@ -131,14 +132,16 @@ function Providers() {
       style={{ marginBottom: 10 }}
       type={active?.real ? 'success' : 'warning'} showIcon
       message={active?.real
-        ? `当前机器人大脑：真实大模型「${active.activeName}」（${active.activeCode}）；调用失败会自动回退内置沙箱，通话不中断。`
+        ? (active.activeCode === 'local-demo'
+          ? '当前机器人大脑：内置离线演示模型（免Key、走真实 OpenAI 兼容链路）。在下方换成豆包/DeepSeek 并填 Key，即无缝升级为真实大模型。'
+          : `当前机器人大脑：真实大模型「${active.activeName}」（${active.activeCode}）；调用失败会自动回退内置沙箱，通话不中断。`)
         : '当前机器人大脑：内置沙箱 NLU（离线可演示）。在下方接入一个 OpenAI 兼容大模型并启用后，接线机器人即切换为真实 AI。'}
     />
     <Button type="primary" icon={<PlusOutlined />} style={{ marginBottom: 10 }} onClick={() => setOpen(true)}>接入大模型</Button>
     <Table rowKey="id" size="small" dataSource={rows} pagination={false} columns={[
       { title: '类型', dataIndex: 'type', render: (v) => <ETag value={v} /> },
       { title: '名称', dataIndex: 'name' }, { title: '供应商标识', dataIndex: 'code' },
-      { title: '状态', dataIndex: 'enabled', render: (v) => (v ? <Tag color="green">启用·真实</Tag> : <Tag>未启用</Tag>) },
+      { title: '状态', dataIndex: 'enabled', render: (v, r) => !v ? <Tag>未启用</Tag> : (r.code === 'sandbox' ? <Tag color="default">启用·内置兜底</Tag> : <Tag color="green">启用·真实</Tag>) },
       { title: '操作', render: (_, r) => <Space>
         <a onClick={() => testSaved(r)}><ApiOutlined />测试连接</a>
         <a onClick={() => reveal(r)}><EyeOutlined />凭证</a>
@@ -150,11 +153,11 @@ function Providers() {
         <Button icon={<ApiOutlined />} loading={testing} onClick={testDraft}>先测试连接</Button>
         <CancelBtn /><OkBtn />
       </Space>}>
-      <Form form={form} layout="vertical" initialValues={{ type: 'LLM', code: 'deepseek', enabled: true }}>
+      <Form form={form} layout="vertical" initialValues={{ type: 'LLM', code: 'local-demo', enabled: true }}>
         <Form.Item name="code" label="选择大模型" rules={[{ required: true }]}><Select options={LLM_PRESETS} showSearch optionFilterProp="label" /></Form.Item>
         <Form.Item name="name" label="配置名称（可选，默认按模型生成）"><Input placeholder="如：售前接线-DeepSeek" /></Form.Item>
-        <Form.Item name="apiKey" label="API Key（本地模型可留空）" rules={[{ required: code !== 'local' && code !== 'custom' ? false : false }]}>
-          <Input.Password autoComplete="new-password" placeholder="sk-xxxxxxxx，加密存储、不明文回显" />
+        <Form.Item name="apiKey" label="API Key（内置离线演示 / 本地模型可留空）">
+          <Input.Password autoComplete="new-password" placeholder="sk-xxxxxxxx，加密存储、不明文回显；选“内置离线演示模型”无需填写" />
         </Form.Item>
         <Space size="large" style={{ display: 'flex' }}>
           <Form.Item name="model" label="模型/接入点（留空用预设）" style={{ flex: 1 }}><Input placeholder={code === 'doubao' ? 'ep-xxxxxxxx' : 'deepseek-chat'} /></Form.Item>

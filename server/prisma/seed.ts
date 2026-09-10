@@ -187,6 +187,19 @@ async function main() {
     else await prisma.providerConfig.create({ data: { id: `80000000-0000-0000-0000-00000000000${i + 1}`, tenantId: t, ...p, ...data } });
   }
 
+  // 10.1) 内置离线演示大模型（走本机 OpenAI 兼容服务，免 Key；接入真实豆包/DeepSeek 后可在集成中心停用它）
+  const localDemo = {
+    type: 'LLM' as const, code: 'local-demo', name: '内置演示大模型（离线免Key）',
+    enabled: true, priority: 80,
+    config: { note: '本机离线演示引擎，走 OpenAI 兼容协议；非神经网络，接真实大模型后停用即可' },
+    credentialsEnc: CredentialCrypto.encrypt(JSON.stringify({ baseUrl: 'http://127.0.0.1:3100/v1', model: 'demo-zh' })),
+  };
+  await prisma.providerConfig.upsert({
+    where: { id: '80000000-0000-0000-0000-000000000010' },
+    update: { enabled: localDemo.enabled, priority: localDemo.priority, config: localDemo.config, credentialsEnc: localDemo.credentialsEnc },
+    create: { id: '80000000-0000-0000-0000-000000000010', tenantId: t, ...localDemo },
+  });
+
   // 11) 质检规则
   const qaRules = [
     { name: '开场规范', type: 'SCRIPT' as const, category: '服务规范', pattern: ['您好', '很高兴为您服务'], weight: 8, mustHit: true },

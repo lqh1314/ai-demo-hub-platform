@@ -88,7 +88,7 @@ export default function Simulator() {
           </Space>
           <Typography.Paragraph className="muted" style={{ marginTop: 14, fontSize: 12 }}>
             价格/演示类会触发意向识别与留资追问；说「转人工」会按技能组策略派单，坐席在「工作台」可看到并接听；
-            全程在「实时通话」可查看转写与 AI 小结。默认走内置沙箱模型，无需任何外部密钥。
+            全程在「实时通话」可查看转写与 AI 小结。当前默认由「内置演示大模型」驱动（离线免 Key、走真实 OpenAI 兼容链路），在「管理端-集成中心」填入豆包等密钥即可无缝升级为真实大模型。
           </Typography.Paragraph>
         </Card>
       </Col>
