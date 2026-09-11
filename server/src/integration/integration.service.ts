@@ -26,11 +26,23 @@ export class IntegrationService {
   toggleKey(id: string, enabled: boolean) { return this.prisma.apiKey.update({ where: { id }, data: { enabled } }); }
 
   // ---------- Webhook（需先创建开放密钥） ----------
-  listWebhooks() { return this.prisma.webhookSubscription.findMany({ where: { tenantId: this.t() } }); }
-  async createWebhook(dto: { apiKeyId?: string; event: string; url: string; secret?: string }) {
+  async listWebhooks() {
+    const rows = await this.prisma.webhookSubscription.findMany({ where: { tenantId: this.t() }, orderBy: { createdAt: 'desc' } });
+    // 前端按 events 数组渲染订阅事件标签，这里为每条订阅补一个虚拟 events 字段
+    return rows.map((r: any) => ({ ...r, events: [r.event] }));
+  }
+  async createWebhook(dto: { apiKeyId?: string; event?: string; events?: string[]; url: string; secret?: string }) {
+    if (!dto.url) throw BizException.badRequest('回调地址不能为空');
+    // 兼容前端 events 数组（多选）与单个 event 两种入参，每个事件建一条订阅
+    const events = (dto.events?.length ? dto.events : dto.event ? [dto.event] : []).map((s) => String(s).trim()).filter(Boolean);
+    if (!events.length) throw BizException.badRequest('订阅事件不能为空');
     const apiKeyId = dto.apiKeyId || (await this.prisma.apiKey.findFirst({ where: { tenantId: this.t() } }))?.id;
     if (!apiKeyId) throw BizException.badRequest('请先创建开放密钥');
-    return this.prisma.webhookSubscription.create({ data: { tenantId: this.t(), apiKeyId, event: dto.event, url: dto.url, secret: dto.secret || randomBytes(12).toString('hex') } });
+    const secret = dto.secret || randomBytes(12).toString('hex');
+    const rows = await this.prisma.$transaction(
+      events.map((event) => this.prisma.webhookSubscription.create({ data: { tenantId: this.t(), apiKeyId, event, url: dto.url, secret } })),
+    );
+    return { created: rows.length, events, first: rows[0] };
   }
   listDeliveries() { return this.prisma.webhookDelivery.findMany({ take: 100, orderBy: { createdAt: 'desc' } }); }
 

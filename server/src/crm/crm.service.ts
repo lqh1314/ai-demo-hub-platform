@@ -121,6 +121,8 @@ export class CrmService {
     return { ...customer, contacts, opportunities, activities };
   }
   async createCustomer(dto: any) {
+    if (!dto?.name) throw BizException.badRequest('客户名称为必填');
+    if (dto.level && !['KA', 'BIG', 'MIDDLE', 'SMALL'].includes(dto.level)) throw BizException.badRequest('客户等级取值非法');
     return this.prisma.customer.create({
       data: {
         tenantId: this.t(), ownerId: dto.ownerId || this.me().userId, name: dto.name, industry: dto.industry,
@@ -134,6 +136,8 @@ export class CrmService {
     return this.prisma.customer.update({ where: { id }, data: dto });
   }
   async createContact(dto: any) {
+    if (!dto?.customerId) throw BizException.badRequest('联系人必须归属某个客户（customerId 必填）');
+    if (!dto?.name) throw BizException.badRequest('联系人姓名为必填');
     return this.prisma.contact.create({ data: { tenantId: this.t(), customerId: dto.customerId, name: dto.name, title: dto.title, phoneRaw: dto.phone, phoneE164: normalizePhone(dto.phone), email: dto.email, wechat: dto.wechat, decisionRole: dto.decisionRole as any, isPrimary: !!dto.isPrimary } });
   }
   async listContacts(q: any) {
@@ -169,6 +173,8 @@ export class CrmService {
     return pageResult(list, total, page, pageSize);
   }
   async createOpportunity(dto: any) {
+    if (!dto?.customerId) throw BizException.badRequest('商机必须归属某个客户（customerId 必填）');
+    if (!dto?.name) throw BizException.badRequest('商机名称为必填');
     return this.prisma.opportunity.create({ data: { tenantId: this.t(), customerId: dto.customerId, contactId: dto.contactId, ownerId: dto.ownerId || this.me().userId, name: dto.name, stage: (dto.stage as any) || 'NEED_CONFIRM', amount: dto.amount, probability: dto.probability ?? 20, expectedClose: dto.expectedClose, source: dto.source as any } });
   }
   async advanceStage(id: string, dto: { stage: string; reason?: string; amount?: number }) {
@@ -186,6 +192,7 @@ export class CrmService {
     return this.prisma.activity.findMany({ where: { relatedType: type, relatedId: id }, orderBy: { happenedAt: 'desc' }, take: 100 });
   }
   async appendActivity(dto: any) {
+    if (!dto?.relatedType || !dto?.relatedId) throw BizException.badRequest('动态必须关联业务对象（relatedType、relatedId 必填）');
     return this.prisma.activity.create({ data: { tenantId: this.t(), creatorId: this.me().userId, type: (dto.type as any) || 'NOTE', relatedType: dto.relatedType, relatedId: dto.relatedId, content: dto.content, durationSec: dto.durationSec, direction: dto.direction, happenedAt: dto.happenedAt ? new Date(dto.happenedAt) : new Date() } });
   }
   async myTasks(status = 'TODO') {

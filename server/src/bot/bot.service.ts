@@ -32,7 +32,11 @@ export class BotService {
   }
   async updateIntent(id: string, dto: any) {
     await this.ensureIntent(id);
-    return this.prisma.intent.update({ where: { id }, data: { ...dto, action: dto.action as any } });
+    // 仅白名单字段落库，避免整行回填时混入 id/tenantId/createdAt 等非更新字段导致 Prisma 报错
+    const allow = ['name', 'code', 'examples', 'keywords', 'slots', 'action', 'answer', 'targetGroupId', 'nextIntent', 'enabled', 'priority'];
+    const data: any = {};
+    for (const k of allow) if (dto[k] !== undefined) data[k] = k === 'action' ? (dto.action as any) : dto[k];
+    return this.prisma.intent.update({ where: { id }, data });
   }
   async deleteIntent(id: string) { await this.ensureIntent(id); await this.prisma.intent.delete({ where: { id } }); return { ok: true }; }
   private async ensureIntent(id: string) {

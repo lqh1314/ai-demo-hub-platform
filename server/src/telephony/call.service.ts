@@ -152,6 +152,8 @@ export class CallService {
 
   async listLines(tenantId: string) { return this.prisma.phoneLine.findMany({ where: { tenantId } }); }
   async createLine(tenantId: string, dto: any) {
-    return this.prisma.phoneLine.create({ data: { tenantId, numberE164: normalizePhone(dto.number) || dto.number, label: dto.label, provider: dto.provider || 'sandbox', concurrencyLimit: dto.concurrencyLimit || 50, groupId: dto.groupId } });
+    if (!dto?.number) throw BizException.badRequest('线路号码为必填');
+    const numberE164 = normalizePhone(dto.number) || dto.number;
+    return this.prisma.phoneLine.create({ data: { tenantId, numberE164, label: dto.label || numberE164, provider: dto.provider || 'sandbox', concurrencyLimit: dto.concurrencyLimit || 50, groupId: dto.groupId } });
   }
 }

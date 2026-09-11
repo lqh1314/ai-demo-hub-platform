@@ -25,6 +25,8 @@ export class CampaignService {
     return pageResult(list, total, page, pageSize);
   }
   async create(dto: any) {
+    if (!dto?.name) throw BizException.badRequest('外呼活动名称为必填');
+    if (dto.strategy && !['MANUAL', 'PREVIEW', 'PREDICTIVE'].includes(dto.strategy)) throw BizException.badRequest('拨号策略取值非法（MANUAL/PREVIEW/PREDICTIVE）');
     return this.prisma.campaign.create({
       data: { tenantId: this.t(), ownerId: this.me().userId, name: dto.name, strategy: (dto.strategy as any) || 'MANUAL', lineId: dto.lineId, groupId: dto.groupId, callerNumber: dto.callerNumber, dailyLimit: dto.dailyLimit ?? 200, concurrency: dto.concurrency ?? 10, predictiveRatio: dto.ratio ?? 1.2, rule: dto.rule },
     });
@@ -33,8 +35,15 @@ export class CampaignService {
   async setStatus(id: string, status: string) { return this.prisma.campaign.update({ where: { id }, data: { status: status as any, startAt: status === 'RUNNING' ? new Date() : undefined } }); }
 
   /** 导入名单（原始号码数组或从客户生成） */
-  async importTargets(id: string, rows: { phone: string; customerId?: string; contactId?: string; name?: string }[]) {
-    const data = rows.map((r) => ({ tenantId: this.t(), campaignId: id, phoneE164: normalizePhone(r.phone) || r.phone, customerId: r.customerId, contactId: r.contactId, custom: r.name ? { name: r.name } : undefined }));
+  async importTargets(id: string, rows: Array<{ phone?: string; phoneE164?: string; phoneRaw?: string; customerId?: string; contactId?: string; name?: string; custom?: { name?: string } }>) {
+    // 兼容前端 {phoneE164,custom:{name}} 与接口 {phone,name} 两种入参，过滤空号
+    const valid = rows.filter((r) => (r.phoneE164 ?? r.phone ?? r.phoneRaw));
+    if (!valid.length) throw BizException.badRequest('导入名单为空或号码缺失');
+    const data = valid.map((r) => {
+      const raw = r.phoneE164 ?? r.phone ?? r.phoneRaw;
+      const name = r.name ?? r.custom?.name;
+      return { tenantId: this.t(), campaignId: id, phoneE164: normalizePhone(raw as string) || (raw as string), customerId: r.customerId, contactId: r.contactId, custom: name ? { name } : undefined };
+    });
     const res = await this.prisma.campaignTarget.createMany({ data, skipDuplicates: true });
     await this.refreshStats(id);
     return { imported: res.count };

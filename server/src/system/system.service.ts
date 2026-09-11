@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma.service';
 import { TenantStore } from '../common/tenant.context';
 import { parsePage, pageResult } from '../common/pagination';
+import { BizException } from '../common/biz.exception';
 
 @Injectable()
 export class SystemService {
@@ -10,7 +11,12 @@ export class SystemService {
 
   // ---------- 数据字典 ----------
   listDicts() { return this.prisma.dict.findMany({ where: { tenantId: this.t() }, include: { items: { orderBy: { sort: 'asc' } } } }); }
-  createDict(dto: any) { return this.prisma.dict.create({ data: { tenantId: this.t(), code: dto.code, name: dto.name } }); }
+  async createDict(dto: any) {
+    if (!dto?.code || !dto?.name) throw BizException.badRequest('字典编码与名称为必填');
+    const exists = await this.prisma.dict.findFirst({ where: { tenantId: this.t(), code: dto.code } });
+    if (exists) throw BizException.badRequest('字典编码已存在');
+    return this.prisma.dict.create({ data: { tenantId: this.t(), code: dto.code, name: dto.name } });
+  }
   addDictItem(dictId: string, dto: any) { return this.prisma.dictItem.create({ data: { dictId, label: dto.label, value: dto.value, sort: dto.sort ?? 0, enabled: dto.enabled ?? true } }); }
 
   // ---------- 站内通知 ----------

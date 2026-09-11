@@ -3,6 +3,7 @@ import { PrismaService } from '../common/prisma.service';
 import { TenantStore } from '../common/tenant.context';
 import { ProviderRegistry } from '../providers/provider.registry';
 import { parsePage, pageResult } from '../common/pagination';
+import { BizException } from '../common/biz.exception';
 
 /** 变量替换：{{姓名}} 等占位符 */
 export function renderTemplate(tpl: string, vars: Record<string, any>) {
@@ -29,16 +30,21 @@ export class MessageService {
   }
 
   /** 创建并立即发送营销任务（沙箱通道直接返回成功） */
-  async dispatch(dto: { templateId: string; channel?: any; audience: { to: string; vars?: Record<string, any> }[]; scheduledAt?: Date }) {
+  async dispatch(dto: { templateId: string; channel?: any; audience: Array<string | { to: string; vars?: Record<string, any> }>; scheduledAt?: Date }) {
+    // 兼容前端“手机号/邮箱字符串数组”与后端 {to,vars} 对象数组两种入参
+    const aud = (dto.audience || [])
+      .map((x: any) => (typeof x === 'string' ? { to: x.trim(), vars: {} } : { to: String(x?.to || '').trim(), vars: x?.vars || {} }))
+      .filter((x) => x.to);
+    if (!aud.length) throw BizException.badRequest('接收方不能为空');
     const tpl = await this.prisma.messageTemplate.findUnique({ where: { id: dto.templateId } });
-    if (!tpl) return { sent: 0 };
+    if (!tpl) throw BizException.badRequest('消息模板不存在');
     const channel = dto.channel || tpl.channel;
     const task = await this.prisma.messageTask.create({
-      data: { tenantId: this.t(), templateId: tpl.id, channel, ownerId: this.store.user.userId, status: dto.scheduledAt ? '待发送' : '发送中', scheduledAt: dto.scheduledAt, targetRule: { audience: dto.audience.length } },
+      data: { tenantId: this.t(), templateId: tpl.id, channel, ownerId: this.store.user.userId, status: dto.scheduledAt ? '待发送' : '发送中', scheduledAt: dto.scheduledAt, targetRule: { audience: aud.length } },
     });
     const sender = this.providers.getChannel();
     let success = 0;
-    for (const a of dto.audience) {
+    for (const a of aud) {
       const content = renderTemplate(tpl.content, a.vars || {});
       try {
         const r = await sender.send({ channel: CHANNEL_CODE[channel] || 'SMS', to: a.to, content });
@@ -50,7 +56,7 @@ export class MessageService {
     }
     return this.prisma.messageTask.update({
       where: { id: task.id },
-      data: { status: '已完成', stats: { total: dto.audience.length, success, fail: dto.audience.length - success } },
+      data: { status: '已完成', stats: { total: aud.length, success, fail: aud.length - success } },
     });
   }
 
